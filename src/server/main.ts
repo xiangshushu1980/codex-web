@@ -17,6 +17,7 @@ import Fastify from "fastify";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { installModuleAliasHook } from "./module";
+import { registerHostFileRoutes } from "./host-files";
 
 type ServerOptions = {
   host: string;
@@ -451,15 +452,11 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
   });
 
   await app.register(fastifyStatic, {
-    root: "/",
-    prefix: "/@fs/",
-    decorateReply: false,
-  });
-
-  await app.register(fastifyStatic, {
     root: path.resolve(__dirname, "../../scratch/asar/webview"),
     prefix: "/",
   });
+
+  registerHostFileRoutes(app);
 
   app.get("/", async (_request, reply) => {
     return reply.sendFile("index.html");

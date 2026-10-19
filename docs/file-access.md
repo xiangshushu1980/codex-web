@@ -2,11 +2,12 @@
 
 ## 当前行为
 
-用户环境是 WSL 服务端和 Windows 浏览器。文件点击继续使用上游内置侧栏和 Ctrl+P，不拦截聊天中的文件链接，不增加文件查看器、目录浏览或文件下载接口。
+用户环境是 WSL 服务端和 Windows 浏览器。文件点击使用现有内部侧栏和 Ctrl+P；HTML 在进入外部打开前路由到侧栏，不增加独立查看器、目录浏览或文件下载接口。
 
 | 操作 | 行为 |
 | --- | --- |
-| 普通文件链接、内部侧栏、Ctrl+P | 沿用上游浏览和预览流程 |
+| 普通 HTML 链接、Ctrl+P 中打开 HTML | 现有内部侧栏标签，iframe 加载原始网页及相对资源 |
+| 其他普通文件链接、内部侧栏、Ctrl+P | 沿用上游浏览和预览流程 |
 | 默认“打开”、系统默认目标 | 在 Windows Explorer 打开所在目录并选中文件 |
 | “打开所在文件夹”/文件管理器目标 | 文件：Explorer 定位并选中；目录：Explorer 打开该目录 |
 | 设置中打开 config.toml | 由上游创建文件后，Explorer 定位并选中 |
@@ -16,11 +17,11 @@
 
 在 Explorer 选中文件后，可通过“打开方式”选择 Windows 浏览器、VSCode、Excel 等应用。它操作原文件，不复制到下载目录。
 
-用户的具体需求是查看 HTML 网页效果、以表格查找 CSV。当前内置 HTML 效果预览/CSV 表格查看能力尚未验证修复；本次提供能在 Windows 工具继续操作的入口。没有把 HTML 转成文本预览，也没有实现另一套 CSV 查看器。原有内置能力仍由上游负责。
+HTML 在现有侧栏 tab 系统中以原始网页显示，不做文本解析，不新增独立弹窗或目录浏览。源码行号链接、显式“打开”目标、远程主机沿用各自流程；CSV 仍可通过 Explorer 选择 Windows 表格工具。
 
 ## 路径与实现
 
-`src/server/electron/shell.ts` 提供 Electron 的 `openPath` 与 `showItemInFolder`。两者在 WSL 都调用 Explorer，文件使用 `/select,`，目录直接打开。`patches/app-host-windows-files.patch` 在 openIn 服务已经根据 cwd 解析路径后，将本地默认/系统默认/文件管理器打开转交此 bridge；它不改侧栏文件点击逻辑。
+`src/server/electron/shell.ts` 提供 Electron 的 `openPath` 与 `showItemInFolder`。两者在 WSL 都调用 Explorer，文件使用 `/select,`，目录直接打开。`patches/app-host-windows-files.patch` 在 openIn 服务已经根据 cwd 解析路径后，将本地默认/系统默认/文件管理器打开转交此 bridge；普通 HTML 点击由 `webview-html-sidebar.patch` 在进入外部 openIn 服务前交给现有侧栏 tab 系统，显式文件管理器操作仍进入 shell。
 
 - Linux 路径由 `wslpath -w` 转为 Windows 盘符或 WSL UNC 路径，支持自定义 Windows 挂载点。
 - Windows 盘符、UNC 和 `file:///` URI 输入先转换回主机路径以检查存在性；URI 只在 URI 边界解码，普通文件名不额外解码。
@@ -31,9 +32,15 @@
 
 Electron `openPath` 的空字符串表示启动请求已交给 Explorer，不能单靠它证明窗口已选中文件。验证记录另有 Windows Shell 的实际选中状态检查。`showItemInFolder` 遵循 Electron 的 void 接口，异步错误记录到服务日志。
 
+## 浏览器文件地址
+
+`src/browser/browser-links.ts` 将 `open-in-browser` 中的本地 file:// URL 转为已有 `/@fs/` HTTP 地址，避免 Windows 浏览器拒绝服务端文件 URI。被浏览器阻止新窗口时在当前页跳转，可后退返回。普通 HTML 点击使用内部侧栏，不走这个外链入口。
+
+`src/server/host-files.ts` 保留已有 `/@fs/*` 地址、MIME、文件流与 Range 支持，通过现有静态插件的 sendFile 发送原文件。路径在路由处完整解码一次，修复静态通配入口对 #、逗号等编码字符的处理；没有新建查看器或内容 API。相对视频/图片/脚本仍沿同一目录解析。
+
 ## 部署与排障
 
-后端、Electron bridge 和上游主进程补丁都要重启才能加载；浏览器构建后也需要刷新。按 [开发手册](development.md) 在活动任务结束后由用户重启本实例。
+HTML 侧栏补丁和 preload 修改刷新网页即可加载。后端 /@fs 编码补强、Electron bridge 和上游主进程补丁需要重启。按 [开发手册](development.md) 在活动任务结束后由用户重启本实例。
 
 1. 还出现“主机文件预览”弹窗：浏览器仍加载旧 preload，请在重启服务后刷新。
 2. 点击后没窗口：查看 `journalctl --user -u codex-web.service -n 60 --no-pager`，检查文件存在、`wslpath` 可用、Windows 盘已挂载、WSL Windows 可执行程序互操作正常。

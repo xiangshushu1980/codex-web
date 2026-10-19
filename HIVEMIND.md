@@ -26,3 +26,7 @@ fileManager openIn actions to the Electron shell bridge. On WSL it reveals the
 original file in Windows Explorer. Upstream sidebar previews and Ctrl+P remain
 in charge of file browsing. See [project docs](docs/README.md) and
 [the file access guide](docs/file-access.md).
+
+`patches/webview-html-sidebar.patch` handles plain local HTML clicks inside the
+existing side-panel tab system with an iframe using the existing /@fs transport.
+Explicit native open targets continue through the Windows shell bridge.

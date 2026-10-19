@@ -253,3 +253,124 @@ test("upstream default/fileManager opens use the shell; explicit editor and remo
   context._.shell.openPath = async () => "cannot launch";
   assert.equal((await service.open({ path: file, cwd: root })).success, false);
 });
+test("browser HTML links reuse /@fs and retain encoding, relative assets and anchors", async () => {
+  const source = await fs.readFile(
+    path.join(__dirname, "../src/browser/browser-links.ts"),
+    "utf8",
+  );
+  const code = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.ESNext },
+  }).outputText;
+  const { toBrowserUrl } = await import(
+    `data:text/javascript;base64,${Buffer.from(code).toString("base64")}`
+  );
+  const base = "http://localhost:8214/thread/test";
+  assert.equal(
+    toBrowserUrl("file:///home/test/a%20b%23%25.html#chart", base),
+    "http://localhost:8214/@fs/home/test/a%20b%23%25.html#chart",
+  );
+  assert.equal(
+    toBrowserUrl("file:///C:/Users/test/a%20b.html", base),
+    "http://localhost:8214/@fs/mnt/c/Users/test/a%20b.html",
+  );
+  assert.equal(
+    toBrowserUrl("https://example.com/test", base),
+    "https://example.com/test",
+  );
+  assert.throws(() => toBrowserUrl("file://other-host/share/test.html", base));
+});
+test("existing /@fs serves encoded filenames, real HTML, relative media and byte ranges", async () => {
+  const Fastify = require("fastify");
+  const staticPlugin = require("@fastify/static");
+  const { registerHostFileRoutes } = require("../src/server/host-files.js");
+  const app = Fastify();
+  await app.register(staticPlugin, { root, serve: false });
+  registerHostFileRoutes(app);
+  try {
+    const html = await app.inject(
+      "/@fs" + file.split("/").map(encodeURIComponent).join("/"),
+    );
+    assert.equal(html.statusCode, 200);
+    assert.match(html.headers["content-type"], /text\/html/);
+    assert.equal(html.body, "<html>test</html>");
+    await fs.mkdir(path.join(root, ".hidden"));
+    await fs.writeFile(path.join(root, ".hidden", "video.mp4"), "0123456789");
+    const media = await app.inject({
+      url: "/@fs" + path.join(root, ".hidden", "video.mp4"),
+      headers: { range: "bytes=2-4" },
+    });
+    assert.equal(media.statusCode, 206);
+    assert.equal(media.body, "234");
+    assert.equal(media.headers["content-range"], "bytes 2-4/10");
+    assert.equal(
+      (await app.inject("/@fs" + root + "/missing.html")).statusCode,
+      404,
+    );
+    assert.equal((await app.inject("/@fs/tmp/a%00b")).statusCode, 400);
+  } finally {
+    await app.close();
+  }
+});
+test("plain local HTML opens in the existing sidebar; explicit targets and source locations bypass it", async () => {
+  const source = await fs.readFile(
+    path.join(
+      __dirname,
+      "../scratch/asar/webview/assets/app-initial-6350d04672d0.js",
+    ),
+    "utf8",
+  );
+  const start = source.indexOf(
+    "  if (r != null && !A && (m == null || m === `local`)",
+  );
+  const end = source.indexOf("  if (r != null && A && qi(T)", start);
+  assert.ok(start > 0 && end > start);
+  const events = [];
+  const context = {
+    r: {},
+    A: false,
+    m: "local",
+    O: null,
+    C: null,
+    y: false,
+    v: null,
+    c: null,
+    f: null,
+    T: "/tmp/page.html",
+    D: null,
+    u: null,
+    k: null,
+    x: () => {},
+    Kj() {},
+    Fj() {},
+    vi() {},
+    uf() {},
+    u7n() {},
+    Zp: path.resolve,
+    URL,
+    encodeURIComponent,
+    window: { location: { href: "http://localhost:8214/" } },
+    Mj: (kind, Component, options) => ({ kind, Component, ...options }),
+    Gj: (_scope, type, options) => events.push({ type, options }),
+    W: () => ({ jsx: (type, props) => ({ type, props }) }),
+  };
+  const run = () =>
+    vm.runInNewContext(`(function(){${source.slice(start, end)};})()`, context);
+  run();
+  assert.equal(events.length, 1);
+  assert.equal(
+    events[0].options.props.url,
+    "http://localhost:8214/@fs/tmp/page.html",
+  );
+  assert.equal(
+    events[0].type.Component(events[0].options.props).type,
+    "iframe",
+  );
+  assert.equal(events[0].options.revealAndFocus, true);
+  for (const field of ["O", "v", "A"]) {
+    const previous = context[field];
+    context[field] = field === "A" ? true : field === "v" ? 5 : "fileManager";
+    run();
+    assert.equal(events.length, 1);
+    context[field] = previous;
+  }
+});

@@ -1,0 +1,37 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -260329,6 +260329,34 @@
+       persistPreferredTargetPath: E,
+       hostId: m,
+     };
++  if (r != null && !A && (m == null || m === `local`) && O == null &&
++      C !== `workspace` && !y && v == null && c == null && f == null &&
++      /\.html?$/i.test(T) && D?.fileViewer == null) {
++    Kj(); Fj(); vi(); uf();
++    const filePath = u == null ? T : Zp(u, T);
++    const url = new URL(`/@fs${filePath.split(`/`).map(encodeURIComponent).join(`/`)}`, window.location.href).href;
++    const tabType = Mj(`codex-web-html`, ({ url, title }) =>
++      (0, W().jsx)(`iframe`, {
++        title,
++        src: url,
++        allow: `autoplay; fullscreen; clipboard-write`,
++        style: { width: `100%`, height: `100%`, minHeight: 0, border: 0, flex: 1 },
++      }), {
++        dropDestinations: [`right`],
++        showInNewTabLauncher: !1,
++        isAvailable: () => !0,
++      });
++    const title = k ?? filePath.split(`/`).pop() ?? `HTML`;
++    Gj(r, tabType, {
++      id: `html:${filePath}`,
++      title,
++      revealAndFocus: !0,
++      props: { url, title },
++    });
++    u7n(r);
++    x?.(null);
++    return;
++  }
+   if (r != null && A && qi(T) && O == null && C !== `workspace` && E == null) {
+     let e = HP(D?.target ?? `right`),
+       t = D?.replaceTabId == null ? null : r.get(e.tabById$, D.replaceTabId),

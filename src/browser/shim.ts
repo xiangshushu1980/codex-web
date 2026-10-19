@@ -1,3 +1,4 @@
+import { openBrowserLink } from "./browser-links";
 import {
   mapBrowserPathToInitialRoute,
   mapMemoryPathToBrowserPath,
@@ -382,7 +383,7 @@ const buildFlavor: "prod" | "dev" | "agent" | string = "prod";
 
 function handleMessageFromView(message: unknown): Promise<unknown> {
   if (isOpenInBrowserMessage(message)) {
-    window.open(message.url, "_blank", "noopener,noreferrer");
+    openBrowserLink(message.url);
     return Promise.resolve();
   }
 

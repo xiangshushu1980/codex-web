@@ -13,12 +13,14 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 | `src/server/electron/shell.ts` | WSL/Windows 路径转换与 Explorer 文件定位 |
 | `src/server/module.ts` | Electron 模块别名 |
 | `src/browser/shim.ts` | preload 适配、WebSocket、Electron bridge、浏览器消息分流 |
+| `src/browser/browser-links.ts` | file:// 到已有 /@fs HTTP 地址的跳转适配 |
+| `src/server/host-files.ts` | 既有 /@fs 文件传输，保留真实 HTML 与媒体 Range |
 | `src/browser/files.ts` | 浏览器选择文件后上传到 WSL 临时目录 |
 | `src/browser/workspace-root-dialog.tsx` | 选择 WSL 主机项目目录；与 Windows 文件上传选择器用途不同 |
 | `patches/` + `scripts/prepare_asar` | 上游应用的可重复适配补丁及应用顺序 |
 | `vite.browser.config.ts` | 浏览器 preload 构建及开发代理 |
 
-应用服务 RPC 经 MessagePort 在 WebSocket 上传输。普通旧消息仍经 Electron IPC。文件点击、侧栏预览和 Ctrl+P 使用上游流程；openIn 服务的本地默认/文件管理器打开经 `app-host-windows-files.patch` 交给 Electron shell bridge，启动 Windows Explorer 并选中文件。没有自建文件查看器或文件目录 API。
+应用服务 RPC 经 MessagePort 在 WebSocket 上传输。普通旧消息仍经 Electron IPC。普通 HTML 点击和 Ctrl+P 通过 `webview-html-sidebar.patch` 使用现有侧栏 tab 系统中的 iframe 渲染原始网页；其他文件预览使用上游流程；openIn 服务的本地默认/文件管理器打开经 `app-host-windows-files.patch` 交给 Electron shell bridge，启动 Windows Explorer 并选中文件。没有自建文件解析器、独立预览弹窗或文件目录 API。
 
 ## 构建和检查
 
