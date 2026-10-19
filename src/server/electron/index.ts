@@ -713,16 +713,66 @@ class Menu {
   }
 }
 
+// Electron assigns each menu item an integer commandId used by the app's
+// application-menu host service to serialize the menu snapshot and to route
+// renderer menu clicks back to MenuItem.click handlers.
+let nextMenuItemCommandId = 1;
+
+const bridgedEditRoles = new Set([
+  "undo",
+  "redo",
+  "cut",
+  "copy",
+  "paste",
+  "pasteAndMatchStyle",
+  "delete",
+  "selectAll",
+]);
+
+// Real Electron synthesizes click handlers for role items; the browser shim
+// forwards edit roles to the renderer page over a dedicated ipc event so the
+// page can run the corresponding editing command.
+function createRoleClick(
+  role: string,
+): (...args: unknown[]) => void {
+  return (_event: unknown, windowArg: unknown, webContentsArg: unknown): void => {
+    if (bridgedEditRoles.has(role)) {
+      const sender = (webContentsArg ??
+        (windowArg as { webContents?: unknown } | undefined)?.webContents) as
+        | { send?: (channel: string, ...args: unknown[]) => void }
+        | undefined;
+      sender?.send?.("codex-web:menu-role", role);
+      return;
+    }
+    const win = windowArg as
+      | { minimize?: () => void; close?: () => void }
+      | undefined;
+    switch (role) {
+      case "minimize":
+        win?.minimize?.();
+        break;
+      case "close":
+        win?.close?.();
+        break;
+      default:
+        log(`MenuItem role ignored in browser: ${role}`, []);
+        break;
+    }
+  };
+}
+
 class MenuItem {
+  accelerator?: string;
   checked?: boolean;
   click?: (...args: unknown[]) => unknown;
-  enabled?: boolean;
+  commandId: number = nextMenuItemCommandId++;
+  enabled = true;
   id?: string;
   label?: string;
   role?: string;
   submenu?: Menu;
-  type?: string;
-  visible?: boolean;
+  type = "normal";
+  visible = true;
 
   constructor(...args: unknown[]) {
     log("new MenuItem", args);
@@ -730,28 +780,34 @@ class MenuItem {
     if (!options || typeof options !== "object") {
       return;
     }
+    this.accelerator =
+      typeof options.accelerator === "string"
+        ? options.accelerator
+        : undefined;
     this.checked =
       typeof options.checked === "boolean" ? options.checked : undefined;
     this.click =
       typeof options.click === "function"
         ? (options.click as (...args: unknown[]) => unknown)
         : undefined;
-    this.enabled =
-      typeof options.enabled === "boolean" ? options.enabled : undefined;
+    this.enabled = options.enabled !== false;
     this.id = typeof options.id === "string" ? options.id : undefined;
     this.label = typeof options.label === "string" ? options.label : undefined;
     this.role = typeof options.role === "string" ? options.role : undefined;
-    this.type = typeof options.type === "string" ? options.type : undefined;
-    this.visible =
-      typeof options.visible === "boolean" ? options.visible : undefined;
+    this.type = typeof options.type === "string" ? options.type : "normal";
+    this.visible = options.visible !== false;
 
     const submenu = options.submenu;
     if (Array.isArray(submenu)) {
       this.submenu = Menu.buildFromTemplate(submenu);
-      return;
-    }
-    if (submenu instanceof Menu) {
+    } else if (submenu instanceof Menu) {
       this.submenu = submenu;
+    }
+    if (this.submenu != null && this.type === "normal") {
+      this.type = "submenu";
+    }
+    if (this.click == null && this.role != null) {
+      this.click = createRoleClick(this.role);
     }
   }
 }
