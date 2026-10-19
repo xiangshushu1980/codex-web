@@ -1,0 +1,11 @@
+--- a/webview/assets/tab-content-24fe1f531bbe.js
++++ b/webview/assets/tab-content-24fe1f531bbe.js
+@@ -8449,6 +8449,8 @@
+         sl,
+         {
+           autoFocusOnOpen: !0,
++          isScreenshotCaptureEnabled: !1,
++          isDeviceToolbarEnabled: !1,
+           browserTabId: n,
+           conversationId: r,
+           cwd: a,

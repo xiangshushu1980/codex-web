@@ -1,3 +1,4 @@
+import { createBrowserAdapter } from "./native-browser";
 import { openBrowserLink } from "./browser-links";
 import {
   mapBrowserPathToInitialRoute,
@@ -379,9 +380,12 @@ const themeMediaQuery = matchMedia("(prefers-color-scheme: dark)");
 const mobileMediaQuery = matchMedia("(max-width: 768px)");
 const initialSidebarState = !mobileMediaQuery.matches;
 const electronShim = (window.__ELECTRON_SHIM__ ??= {});
+const browserAdapter = createBrowserAdapter(dispatchHostMessage);
+Object.assign(electronShim, { browserAdapter });
 const buildFlavor: "prod" | "dev" | "agent" | string = "prod";
 
 function handleMessageFromView(message: unknown): Promise<unknown> {
+  if (isRecord(message) && browserAdapter.handle(message)) return Promise.resolve();
   if (isOpenInBrowserMessage(message)) {
     openBrowserLink(message.url);
     return Promise.resolve();

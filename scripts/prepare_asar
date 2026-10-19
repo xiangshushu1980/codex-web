@@ -49,3 +49,5 @@ patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-arc
 patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-windows-files.patch
 rm -rf scratch/asar/node_modules/better-sqlite3
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-html-sidebar.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-browser-adapter.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-browser-capabilities.patch

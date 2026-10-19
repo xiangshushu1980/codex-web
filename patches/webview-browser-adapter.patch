@@ -1,0 +1,19 @@
+--- a/webview/assets/app-shared-8bd9d0399038.js
++++ b/webview/assets/app-shared-8bd9d0399038.js
+@@ -279810,6 +279810,7 @@
+ async function qli() {
+   (($3 = Uli(Vli)),
+     (e6 = await $3.services),
++    (e6 = window.__ELECTRON_SHIM__?.browserAdapter?.adaptServices(e6) ?? e6),
+     $3.onRpcBroken(Gli(e6.histogramCollector)),
+     e6.threadReadState != null &&
+       (await Vli.threadReadState.initialize(e6.threadReadState)),
+@@ -317455,7 +317456,7 @@
+         }) {
+           let f = document.createElement(`div`),
+             p = document.createElement(`div`),
+-            m = document.createElement(`webview`);
++            m = window.__ELECTRON_SHIM__?.browserAdapter?.createWebview({ conversationId: n, browserTabId: t }) ?? document.createElement(`webview`);
+           ((this.browserHostService = e),
+             (this.browserTabId = t),
+             (this.conversationId = n),

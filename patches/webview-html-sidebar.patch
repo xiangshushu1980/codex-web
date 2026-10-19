@@ -1,6 +1,6 @@
 --- a/webview/assets/app-initial-6350d04672d0.js
 +++ b/webview/assets/app-initial-6350d04672d0.js
-@@ -260329,6 +260329,34 @@
+@@ -260329,6 +260329,61 @@
        persistPreferredTargetPath: E,
        hostId: m,
      };
@@ -10,24 +10,51 @@
 +    Kj(); Fj(); vi(); uf();
 +    const filePath = u == null ? T : Zp(u, T);
 +    const url = new URL(`/@fs${filePath.split(`/`).map(encodeURIComponent).join(`/`)}`, window.location.href).href;
-+    const tabType = Mj(`codex-web-html`, ({ url, title }) =>
-+      (0, W().jsx)(`iframe`, {
-+        title,
-+        src: url,
-+        allow: `autoplay; fullscreen; clipboard-write`,
-+        style: { width: `100%`, height: `100%`, minHeight: 0, border: 0, flex: 1 },
-+      }), {
-+        dropDestinations: [`right`],
-+        showInNewTabLauncher: !1,
-+        isAvailable: () => !0,
-+      });
 +    const title = k ?? filePath.split(`/`).pop() ?? `HTML`;
-+    Gj(r, tabType, {
-+      id: `html:${filePath}`,
-+      title,
-+      revealAndFocus: !0,
-+      props: { url, title },
++    const adapter = window.__ELECTRON_SHIM__?.browserAdapter;
++    let tabType, props, id;
++    const simple = () => (0, W().jsx)(`iframe`, {
++      title, src: url, allow: `autoplay; fullscreen; clipboard-write`,
++      style: { width: `100%`, height: `100%`, border: 0, flex: 1 },
 +    });
++    try {
++      if (!adapter || !N.conversationId) throw Error(`Browser adapter unavailable`);
++      Gfa();
++      id = `codex-web:${filePath}`;
++      adapter.open({ conversationId: N.conversationId, browserTabId: id, url });
++      const NativePanel = Xla;
++      class Guard extends us().Component {
++        state = { simple: false, failed: false };
++        static getDerivedStateFromError() { return { simple: true, failed: true }; }
++        render() {
++          return (0, W().jsxs)(`div`, {
++            style: { height: `100%`, display: `flex`, flexDirection: `column` },
++            children: [
++              (0, W().jsx)(`button`, {
++                style: { alignSelf: `flex-end`, padding: `4px 10px`, fontSize: 12 },
++                onClick: () => this.setState({ simple: !this.state.simple, failed: false }),
++                children: this.state.simple ? `使用浏览器面板` : `简易预览`,
++              }),
++              (0, W().jsx)(`div`, {
++                style: { flex: 1, minHeight: 0, position: `relative`, display: this.state.simple ? `none` : `block` },
++                children: this.state.failed ? null : (0, W().jsx)(NativePanel, this.props),
++              }),
++              this.state.simple && (0, W().jsx)(`div`, {
++                style: { flex: 1, minHeight: 0 },
++                children: simple(),
++              }),
++            ],
++          });
++        }
++      }
++      tabType = { ...dJ, Component: Guard, isAvailable: () => !0 };
++      props = { browserConversationId: N.conversationId, browserTabId: id, cwd: u, target: `right` };
++    } catch {
++      id = `html:${filePath}`;
++      tabType = Mj(`codex-web-html`, simple, { dropDestinations: [`right`], showInNewTabLauncher: !1, isAvailable: () => !0 });
++      props = { url, title };
++    }
++    Gj(r, tabType, { id, title, revealAndFocus: !0, props });
 +    u7n(r);
 +    x?.(null);
 +    return;
