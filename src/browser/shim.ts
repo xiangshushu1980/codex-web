@@ -375,6 +375,35 @@ function addIpcListener(channel: string, listener: IpcListener): void {
   rendererListeners.set(channel, listeners);
 }
 
+// The server-side fake Electron forwards role-only menu items (Edit menu:
+// undo/cut/copy/paste/...) over this channel; run them in the focused page.
+const pageEditRoles = new Set([
+  "undo",
+  "redo",
+  "cut",
+  "copy",
+  "delete",
+  "selectAll",
+]);
+addIpcListener("codex-web:menu-role", (_event, ...args) => {
+  const role = args[0];
+  if (typeof role !== "string") {
+    return;
+  }
+  if (role === "paste" || role === "pasteAndMatchStyle") {
+    void navigator.clipboard
+      ?.readText?.()
+      .then((text) => {
+        document.execCommand("insertText", false, text);
+      })
+      .catch(() => {});
+    return;
+  }
+  if (pageEditRoles.has(role)) {
+    document.execCommand(role);
+  }
+});
+
 function shouldCloseSidebarForMemoryPath(path: string): boolean {
   return (
     path === "/" ||
