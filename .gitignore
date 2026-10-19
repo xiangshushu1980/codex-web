@@ -1,3 +1,12 @@
-node_modules/
-scratch*/
+node_modules
+scratch*
 sentry
+src/server/**/*.js
+src/server/**/*.js.map
+src/server/**/*.d.ts
+src/server/**/*.d.ts.map
+artifact-sessions/
+.playwright-cli/
+*.log
+.codex-tpp-local-executor-installation-id
+statsig-state.json*
