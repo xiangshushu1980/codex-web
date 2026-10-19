@@ -19,8 +19,10 @@ The patch is applied by `scripts/prepare_asar`. `scratch/`, `node_modules/`, and
 compiled server output are local build/runtime artifacts and must not be
 committed.
 
-## Browser file access
+## Windows file access
 
-`patches/app-host-browser-files.patch` routes local openIn actions and config.toml
-opening to the requesting browser view. Source and operational details are in
-[the local project docs](docs/README.md) and [file access guide](docs/file-access.md).
+`patches/app-host-windows-files.patch` routes local default/systemDefault and
+fileManager openIn actions to the Electron shell bridge. On WSL it reveals the
+original file in Windows Explorer. Upstream sidebar previews and Ctrl+P remain
+in charge of file browsing. See [project docs](docs/README.md) and
+[the file access guide](docs/file-access.md).

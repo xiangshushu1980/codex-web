@@ -1,58 +1,43 @@
 # WSL 与 Windows 文件访问
 
-## 当前约定
+## 当前行为
 
-WSL 上的 Codex 使用 Linux 路径；Windows 浏览器通过 HTTP 查看这些文件。日常打开操作优先在网页内完成，不依赖浏览器的 `file://` 权限、Linux GUI 或 Windows 文件关联。
+用户环境是 WSL 服务端和 Windows 浏览器。文件点击继续使用上游内置侧栏和 Ctrl+P，不拦截聊天中的文件链接，不增加文件查看器、目录浏览或文件下载接口。
 
-- 聊天中指向绝对路径、`file://` 或 `/@fs/` 的文件链接：网页文件对话框。
-- openIn 服务的本地主机打开操作：网页预览；选择文件管理器时展示所在目录。
-- 设置中的打开 `config.toml`：仍由上游确保文件存在，然后在网页查看。
-- 已有代码编辑侧栏：保留上游入口；新增文件预览是只读的。
-- HTTP/HTTPS 网页链接：在新标签页打开；同一请求不再重复转交后端。
-- 无网页预览的文件：点击“下载文件，在 Windows 中打开”，下载由 Windows 浏览器接收。
-
-目录页提供上级目录、子项和路径输入。也可以直接在地址栏进入 `/__backend/files/view`，从服务进程用户的 home 开始浏览；指定文件示例：`/__backend/files/view?path=%2Fhome%2Fsean%2Fprojects%2Fcodex-web%2FREADME.md`。
-
-## 预览能力
-
-| 类型 | 行为 |
+| 操作 | 行为 |
 | --- | --- |
-| UTF-8 文本、代码、Markdown、HTML | 转义后按文本显示，支持行号和 `#L数字` 定位；HTML 不执行脚本 |
-| PNG/JPEG/GIF/WebP/AVIF/SVG/ICO | 浏览器图片预览 |
-| MP4/WebM/MOV、MP3/WAV/OGG/M4A | 浏览器原生播放器，是否可播放取决于浏览器编码支持 |
-| PDF | 浏览器内嵌 PDF 预览；不可用时下载 |
-| Office、压缩包、非 UTF-8、含空字符的二进制 | 下载后使用 Windows 应用 |
-| 超过 2 MiB 的非媒体文件 | 提供下载，避免加载大文本 |
-| 目录和符号链接 | 目录浏览；符号链接按主机实际目标读取 |
+| 普通文件链接、内部侧栏、Ctrl+P | 沿用上游浏览和预览流程 |
+| 默认“打开”、系统默认目标 | 在 Windows Explorer 打开所在目录并选中文件 |
+| “打开所在文件夹”/文件管理器目标 | 文件：Explorer 定位并选中；目录：Explorer 打开该目录 |
+| 设置中打开 config.toml | 由上游创建文件后，Explorer 定位并选中 |
+| 明确选择编辑器，例如 VSCode | 沿用上游指定应用的打开流程，未承诺自动转换为 Windows 编辑器 |
+| HTTP/HTTPS 外链 | 浏览器新标签页 |
+| SSH/cloud 远程主机文件 | 沿用上游远程处理，不当成本机文件启动 Explorer |
 
-这是当前登录主机文件的查看器，不提供 Office 编辑器或任意格式转换器。上游仍可能有少数直接调用 `shell` 的诊断/下载菜单，它们保留已有 Windows Explorer 回退；网页查看器中的下载按钮是 Windows 下载的确定入口。远程 SSH/cloud 主机路径由上游处理，不错误地当成本机文件。
+在 Explorer 选中文件后，可通过“打开方式”选择 Windows 浏览器、VSCode、Excel 等应用。它操作原文件，不复制到下载目录。
 
-## 路径规则
+用户的具体需求是查看 HTML 网页效果、以表格查找 CSV。当前内置 HTML 效果预览/CSV 表格查看能力尚未验证修复；本次提供能在 Windows 工具继续操作的入口。没有把 HTML 转成文本预览，也没有实现另一套 CSV 查看器。原有内置能力仍由上游负责。
 
-服务接受 Linux 绝对路径、`~/`、`file:///` URI、Windows 盘符路径，以及当前发行版的 `\\wsl.localhost\发行版\...` / `\\wsl$\发行版\...`。
+## 路径与实现
 
-Windows 盘符路径在 WSL 映射到 `/mnt/<小写盘符>/`；使用自定义挂载点时请提供实际 Linux 路径。WSL UNC 必须匹配服务环境变量 `WSL_DISTRO_NAME`，其他发行版和远程共享明确报错。相对 API 路径以服务用户 home 为基准；聊天相对链接应通过上游携带 cwd 的 openIn 服务解析，不以网页 URL 推测项目目录。
+`src/server/electron/shell.ts` 提供 Electron 的 `openPath` 与 `showItemInFolder`。两者在 WSL 都调用 Explorer，文件使用 `/select,`，目录直接打开。`patches/app-host-windows-files.patch` 在 openIn 服务已经根据 cwd 解析路径后，将本地默认/系统默认/文件管理器打开转交此 bridge；它不改侧栏文件点击逻辑。
 
-查询参数使用 URLSearchParams 编码。URI 和链接中的百分号编码在对应边界解码；IPC 发来的真实文件名不额外解码。链接支持 `:行[:列]` 和 `#L行`；查看器定位到行，暂不定位列。文件名本身含 `#`、`%`、中文、空格和问号时，经 API 路径参数原样传入。
+- Linux 路径由 `wslpath -w` 转为 Windows 盘符或 WSL UNC 路径，支持自定义 Windows 挂载点。
+- Windows 盘符、UNC 和 `file:///` URI 输入先转换回主机路径以检查存在性；URI 只在 URI 边界解码，普通文件名不额外解码。
+- 先压缩重复反斜杠并保留两个起始反斜杠，再使用 `path.win32.normalize` 规范化路径；不手工猜测发行版名称。
+- 通过可执行文件和独立 argv 启动 Explorer，不拼 shell 命令；支持中文、空格、#、%、逗号等文件名。
+- Explorer 的工作目录设为 Windows 挂载盘根目录，避免把 Linux UNC 作为启动工作目录。
+- 先检查普通文件或目录；缺失路径、设备文件、路径转换和启动错误返回错误，不报告成功。
 
-## 接口和边界
+Electron `openPath` 的空字符串表示启动请求已交给 Explorer，不能单靠它证明窗口已选中文件。验证记录另有 Windows Shell 的实际选中状态检查。`showItemInFolder` 遵循 Electron 的 void 接口，异步错误记录到服务日志。
 
-| 接口 | 用途 |
-| --- | --- |
-| `GET /__backend/files/view?path=...&line=...` | 自包含 HTML 文件/目录页，可作为独立浏览器标签页打开 |
-| `GET /__backend/files/content?path=...` | 媒体内嵌内容，其余内容作为附件 |
-| `GET /__backend/files/content?path=...&download=1` | 强制下载 |
+## 部署与排障
 
-内容接口支持单段 `Range`、206/416、UTF-8 下载文件名。普通文件以流发送；拒绝设备、FIFO、目录等非普通文件下载。不存在、无权限和路径输入错误返回对应 HTTP 错误和可见提示。响应不缓存，文本/文件名转义，文件内容附带 nosniff/CSP sandbox；目录页不会执行文件里的 HTML/JS。
+后端、Electron bridge 和上游主进程补丁都要重启才能加载；浏览器构建后也需要刷新。按 [开发手册](development.md) 在活动任务结束后由用户重启本实例。
 
-权限沿用原项目：能访问此服务的人已能够以服务用户操作主机，不限定到某个项目目录。原有 `/@fs/` 静态入口继续用于上游图片。遵守根 README 的可信网络/外部认证要求，不把文件查看器误认为新增隔离边界。
+1. 还出现“主机文件预览”弹窗：浏览器仍加载旧 preload，请在重启服务后刷新。
+2. 点击后没窗口：查看 `journalctl --user -u codex-web.service -n 60 --no-pager`，检查文件存在、`wslpath` 可用、Windows 盘已挂载、WSL Windows 可执行程序互操作正常。
+3. Explorer 能定位但 Windows 软件打不开：先用资源管理器“打开方式”选择应用；部分应用对 WSL UNC 支持不同，需要按具体应用继续排查。
+4. HTML 在浏览器中缺少资源：确认相对引用文件存在；浏览器对 file:// 的脚本、模块和网络请求有限制，复杂网页可能需要项目自身的 HTTP 开发服务器。
 
-## 排障
-
-1. 404：确认文件仍存在，路径属于当前 WSL 主机；Windows 文件用对应 `/mnt/c/...` 检查。
-2. 403：确认运行服务的 Linux 用户可读文件及父目录。
-3. 打开预览却出现聊天首页：后端还没加载文件路由，或代理未转发 `/__backend/files`；完成服务切换并刷新。
-4. 旧操作仍打开 Explorer：确认已应用 `app-host-browser-files.patch` 并重启主进程；少数旧 shell 菜单保留原行为。
-5. 视频/PDF 无画面：先下载确认文件可用；浏览器格式支持与字节 Range 请求分别排查。
-
-验证范围和未验证环境见 [验证记录](validation.md)。
+本项目仍沿用根 README 的可信网络和服务访问权限边界。验证范围见 [验证记录](validation.md)。

@@ -1,3 +1,5 @@
+import { shell } from "./shell";
+
 type StubFunction = (...args: unknown[]) => unknown;
 type StubListener = (...args: unknown[]) => void;
 type StubMessagePort = {
@@ -1101,6 +1103,7 @@ const electronModule = new Proxy(
     WebContentsView,
     webContents,
     dialog,
+    shell,
   } as Record<string, unknown>,
   {
     get(target, prop) {
@@ -1136,6 +1139,7 @@ export {
   WebContentsView,
   webContents,
   crashReporter,
+  shell,
   dialog,
 };
 export default electronModule;

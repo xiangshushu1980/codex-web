@@ -9,17 +9,16 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 | 入口 | 职责 |
 | --- | --- |
 | `src/server/main.ts` | Fastify、静态资源、上传、IPC/MessagePort WebSocket 桥、加载上游主进程 |
-| `src/server/electron/index.ts` | Electron 主进程 API 模拟，窗口和 IPC；已有 Windows Explorer 回退 |
+| `src/server/electron/index.ts` | Electron 主进程 API 模拟，窗口和 IPC |
+| `src/server/electron/shell.ts` | WSL/Windows 路径转换与 Explorer 文件定位 |
 | `src/server/module.ts` | Electron 模块别名 |
 | `src/browser/shim.ts` | preload 适配、WebSocket、Electron bridge、浏览器消息分流 |
-| `src/browser/local-files.ts` | 文件链接识别、网页预览对话框 |
-| `src/server/local-files.ts` | 路径归一化、文件/目录 HTML、下载、媒体字节范围 |
 | `src/browser/files.ts` | 浏览器选择文件后上传到 WSL 临时目录 |
 | `src/browser/workspace-root-dialog.tsx` | 选择 WSL 主机项目目录；与 Windows 文件上传选择器用途不同 |
 | `patches/` + `scripts/prepare_asar` | 上游应用的可重复适配补丁及应用顺序 |
 | `vite.browser.config.ts` | 浏览器 preload 构建及开发代理 |
 
-应用服务 RPC 经 MessagePort 在 WebSocket 上传输。普通旧消息仍经 Electron IPC。新增打开文件事件 `codex-web-open-file` 从请求所属 view 返回，浏览器 shim 展示对话框，防止多标签页串开文件。代码文件原有编辑侧栏继续由上游处理；走 openIn 服务的外部文件打开操作转网页预览。
+应用服务 RPC 经 MessagePort 在 WebSocket 上传输。普通旧消息仍经 Electron IPC。文件点击、侧栏预览和 Ctrl+P 使用上游流程；openIn 服务的本地默认/文件管理器打开经 `app-host-windows-files.patch` 交给 Electron shell bridge，启动 Windows Explorer 并选中文件。没有自建文件查看器或文件目录 API。
 
 ## 构建和检查
 
@@ -31,11 +30,11 @@ npm run build:browser
 npm run test:files
 ```
 
-`build:server` 在源码旁输出 JS、声明和 source map，Git 忽略它们。浏览器构建更新 `scratch/asar/webview/assets/preload.js`。文件测试包含 HTTP 注入和浏览器路径逻辑，测试 fixture 在临时目录，测试结束清理。
+`build:server` 在源码旁输出 JS、声明和 source map，Git 忽略它们。浏览器构建更新 `scratch/asar/webview/assets/preload.js`。文件测试覆盖路径规范化、Explorer argv、启动失败和上游 openIn 路由；测试使用 mock 启动器，不弹出 Windows 窗口，fixture 在临时目录，结束清理。
 
 首次准备或升级应用时，按 [UPGRADING](../UPGRADING.md) 准备应用包和 `HOSTED_CODEX_APP_ZIP`，再执行 `npm run build`。它会重新解包并应用补丁，不能拿来保留 scratch 中的手工实验。不要为普通 TypeScript 改动重新下载应用包。
 
-开发模式：先启动 WSL 后端，再 `npm run dev:browser`；Vite 默认监听 4173，代理 `/__backend/ipc`、`/__backend/upload`、`/__backend/files` 到 8214。
+开发模式：先启动 WSL 后端，再 `npm run dev:browser`；Vite 默认监听 4173，代理 `/__backend/ipc`、`/__backend/upload` 到 8214。
 
 ## 本机运行和切换
 

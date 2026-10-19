@@ -34,10 +34,6 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
-      "/__backend/files": {
-        target: `http://127.0.0.1:8214`,
-        changeOrigin: true,
-      },
       "/__backend/upload": {
         target: `http://127.0.0.1:8214`,
         changeOrigin: true,

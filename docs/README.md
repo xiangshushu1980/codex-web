@@ -7,8 +7,8 @@
 | 项目用途、通用启动、安全边界 | [根 README](../README.md) |
 | Electron、浏览器和 WebSocket 的原有架构 | [ARCHITECTURE](../ARCHITECTURE.md) |
 | 当前本地架构、源码入口、开发与验证 | [开发手册](development.md) |
-| 文件预览、下载、路径规则和故障处理 | [WSL 文件访问](file-access.md) |
-| 为什么优先网页打开文件 | [文件访问决策](decisions/browser-file-access.md) |
+| Explorer 文件定位、路径规则和故障处理 | [WSL 文件访问](file-access.md) |
+| 为何恢复内置预览并使用 Windows Explorer | [文件访问决策](decisions/browser-file-access.md) |
 | 本地分支来源与提交边界 | [HIVEMIND](../HIVEMIND.md) |
 | 上游应用升级与补丁维护 | [UPGRADING](../UPGRADING.md) |
 

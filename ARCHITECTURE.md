@@ -1,6 +1,6 @@
 # architecture
 
-Local WSL/browser adaptations and current source map: [development guide](docs/development.md). File previews and downloads: [file access](docs/file-access.md).
+Local WSL/browser adaptations and current source map: [development guide](docs/development.md). Windows file opening: [file access](docs/file-access.md).
 
 a bit on how this whole thing is put together.
 

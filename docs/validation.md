@@ -1,27 +1,21 @@
-# 文件访问改造验证
+# Windows 文件定位验证
 
-检查日期：2026-10-19。基于仓库提交 `5bdb7bd2a68b326ef33c69a4e7fa8d2fcb7c0b1e` 上的本次源码改动；本机 Node v24.18.0，WSL Ubuntu。以下记录区分自动检查、隔离浏览器实测与正式实例切换。
+检查日期：2026-10-19。此记录取代 `c46eaf1` 中自建网页查看器的验证；此前 8 项 HTTP/预览检查不能作为当前 Explorer 行为的证明。
 
-## 已通过
+## 已验证
 
-- `npm run test:files`：8 项测试全部通过。覆盖 Linux/Windows/file URI/WSL UNC 映射；真实文件名与链接行号的区别；中文、空格、#、%、问号；应用路由不被当作文件链接；文本转义；目录、符号链接和二进制降级；下载字节和文件名；媒体单段/后缀/开放范围、无效范围；空文件、缺失文件和设备文件拒绝。
-- 测试直接从本地已打补丁的上游 bundle 提取 `JQ`（openIn 服务）执行，确认相对文件路径按 cwd 解析、事件发给原始 view、文件管理器动作使用父目录。生成名会随上游升级变化，升级时必须同步测试和补丁。
-- `npm run build:server`、`npm run build:browser` 通过。
-- `node --check scratch/asar/.vite/build/main-CqEoQDOU.js` 通过。
-- 对新补丁执行 `patch --dry-run --reverse` 成功，确认当前解包主进程包含补丁；没有重新下载或全量重建上游包。
-- Playwright CLI 的隔离 Chromium 实测，连接独立 Fastify 文件测试服务（8215）：点击文件按钮打开单个 dialog，iframe 显示 README 第 5 行；点击绝对路径文件链接也可打开；关闭后 dialog 移除。截图已检查，文本和高亮可见；控制台 0 errors / 0 warnings。测试服务与截图属于本地临时产物，不纳入仓库。
+- 当前 WSL 进程没有 `WSL_DISTRO_NAME`/`WSL_INTEROP` 环境变量，`/proc/version` 包含 WSL 标识；bridge 能识别该环境。
+- 实际 `wslpath -w` 返回包含重复反斜杠的 UNC 路径；规范化后由 Explorer 使用。发行版名称来自 wslpath，不根据“Ubuntu”描述猜测。
+- 真实 Windows 检查：Explorer 定位本地生成的 `scratch/windows-file-check/中文 空格 # %,test.html`，PowerShell 通过 `Shell.Application.Windows()` 查询目标目录窗口及 SelectedItems，得到 `folderMatched=true`、`unicodeHtmlSelected=true`。证明带中文、空格、#、%、逗号的原始 HTML 文件被选中，不只依据 Node 的 spawn 事件。样例为本地临时产物，不入库。
+- 自动回归 `npm run test:files` 覆盖 8 组测试：UNC/盘符规范化；文件和目录 argv；Open/Reveal 调用；URI/原始文件名；缺失和设备文件拒绝；转换/启动错误；上游默认、fileManager、systemDefault 路由，以及显式编辑器/远程主机保留。
+- 前后端构建、上游主进程 JS 语法检查、新补丁反向 dry-run，交付前检查通过。
 
-## 正式实例与剩余验收
+## 切换后验收
 
-当前 8214 运行进程尚未重启加载新增后端和主进程补丁。已生成浏览器及服务器产物；**正式生效需要由用户在当前会话安全结束后重启实例，再刷新 Windows 浏览器**。没有把隔离验证标记为正式部署验证。
+正式 8214 实例需由用户在活动任务安全结束后重启并刷新浏览器。操作见 [开发手册](development.md)。本会话未自行重启，因为服务包含本会话的 Codex app-server。
 
-原因：本会话的执行 shell 的父进程是 `codex app-server`，它属于 `codex-web.service` 进程树；服务 `KillMode=control-group`。在会话中重启会终止当前工作及其他活动任务。操作见 [开发手册](development.md)。
+1. 文件点击仍使用原侧栏预览/Ctrl+P，不再出现新增的“主机文件预览”弹窗。
+2. 对 HTML 或 CSV 使用“打开”/“打开所在文件夹”，Explorer 应显示原文件并选中。
+3. 在 Explorer 中选择 Windows 浏览器、Excel、VSCode 等应用，按实际文件验证所需效果。
 
-用户在 Windows 浏览器验收：
-
-1. 重启并刷新后，打开聊天中的 Linux 文件链接；应出现网页预览，不启动 Explorer。
-2. 打开目录、含中文和空格的文件，并检查行号跳转。
-3. 从预览点击下载 Office 或其他二进制文件，确认进入 Windows 浏览器的下载目录并可由 Windows 应用打开。
-4. 检查原有代码编辑侧栏与普通网页外链仍正常。
-
-未实测 Windows Chrome/Edge 的实际文件关联、Office 打开，以及真实视频/PDF 的浏览器编码支持；自动测试只证明媒体响应和范围处理。既有 shell 菜单的 Explorer 回退属于本次开始前的工作区改动，未纳入本次提交或 Windows 验证。
+未声称修复内置 HTML 浏览器或新增 CSV 表格查看能力。明确选择 Windows 编辑器的自动应用集成、各 Windows 应用的 WSL UNC 支持需按具体应用验证。

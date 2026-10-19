@@ -1,0 +1,14 @@
+--- a/.vite/build/main-CqEoQDOU.js
++++ b/.vite/build/main-CqEoQDOU.js
+@@ -125737,6 +125737,11 @@
+               ? { line: o, column: typeof s == `number` ? s : 1 }
+               : null,
+           w = v != null || (_ && i.p(m, b)) ? MI(m, v, b) : null;
++        if (!_ && (n == null || n === `systemDefault` || n === `fileManager`)) {
++          let error = await require(`electron`).shell.openPath(x);
++          if (error) throw Error(error);
++          return { success: !0 };
++        }
+         if (
+           !_ &&
+           !S &&
