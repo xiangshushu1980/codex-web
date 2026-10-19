@@ -166,6 +166,10 @@ export function emitRendererEvent(channel: string, args: unknown[]): void {
   }
 }
 
+function dispatchHostMessage(message: unknown): void {
+  emitRendererEvent("codex_desktop:message-for-view", [message]);
+}
+
 function handleIncomingMessage(message: MainToRendererMessage): void {
   if (message.type === "ipc-main-event") {
     emitRendererEvent(message.channel, message.args);
@@ -326,14 +330,21 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isUnhandledAddWorkspaceRootOptionMessage(value: unknown): value is {
+function isAddWorkspaceRootOptionMessage(value: unknown): value is {
   root?: unknown;
   type: "electron-add-new-workspace-root-option";
 } {
   return (
-    isRecord(value) &&
-    value.type === "electron-add-new-workspace-root-option" &&
-    typeof value.root !== "string"
+    isRecord(value) && value.type === "electron-add-new-workspace-root-option"
+  );
+}
+
+function isPickWorkspaceRootOptionMessage(value: unknown): value is {
+  allowMultiple?: boolean;
+  type: "electron-pick-workspace-root-option";
+} {
+  return (
+    isRecord(value) && value.type === "electron-pick-workspace-root-option"
   );
 }
 
@@ -368,6 +379,45 @@ const mobileMediaQuery = matchMedia("(max-width: 768px)");
 const initialSidebarState = !mobileMediaQuery.matches;
 const electronShim = (window.__ELECTRON_SHIM__ ??= {});
 const buildFlavor: "prod" | "dev" | "agent" | string = "prod";
+
+function handleMessageFromView(message: unknown): Promise<unknown> {
+  if (isOpenInBrowserMessage(message)) {
+    window.open(message.url, "_blank", "noopener,noreferrer");
+  }
+
+  if (isLocalFilePickerMessage(message)) {
+    return handleLocalFilePickerMessage(message);
+  }
+
+  if (isAddWorkspaceRootOptionMessage(message)) {
+    if (typeof message.root === "string") {
+      return invokeMain("codex_desktop:message-from-view", [message]);
+    }
+
+    return openSelectWorkspaceRootDialog({
+      listDirectory: requestWorkspaceDirectoryEntries,
+    }).then((root) => {
+      if (!root) return undefined;
+      return invokeMain("codex_desktop:message-from-view", [
+        { ...message, root },
+      ]);
+    });
+  }
+
+  if (isPickWorkspaceRootOptionMessage(message)) {
+    return openSelectWorkspaceRootDialog({
+      listDirectory: requestWorkspaceDirectoryEntries,
+    }).then((root) => {
+      dispatchHostMessage(
+        root
+          ? { type: "workspace-root-option-picked", root }
+          : { type: "workspace-root-option-add-canceled" },
+      );
+    });
+  }
+
+  return invokeMain("codex_desktop:message-from-view", [message]);
+}
 
 Object.assign(globalThis, {
   process: {
@@ -441,25 +491,7 @@ electronShim.onMemoryNavigationChanged = (navigation) => {
 export const ipcRenderer = {
   invoke(channel: string, ...args: unknown[]): Promise<unknown> {
     if (channel === "codex_desktop:message-from-view" && args.length === 1) {
-      if (isOpenInBrowserMessage(args[0])) {
-        window.open(args[0].url, "_blank", "noopener,noreferrer");
-      }
-
-      if (isLocalFilePickerMessage(args[0])) {
-        return handleLocalFilePickerMessage(args[0]);
-      }
-
-      if (isUnhandledAddWorkspaceRootOptionMessage(args[0])) {
-        return openSelectWorkspaceRootDialog({
-          listDirectory: requestWorkspaceDirectoryEntries,
-        }).then((root) => {
-          if (!root) {
-            return undefined;
-          }
-
-          return invokeMain(channel, [{ ...args[0], root }]);
-        });
-      }
+      return handleMessageFromView(args[0]);
     }
 
     return invokeMain(channel, args);
@@ -589,8 +621,18 @@ export const ipcRenderer = {
 ensureSocket();
 
 export const contextBridge = {
-  exposeInMainWorld(_key: string, _api: unknown): void {
-    Reflect.set(window, _key, _api);
+  exposeInMainWorld(key: string, api: unknown): void {
+    // The app's message bus calls the exposed Electron bridge directly rather
+    // than ipcRenderer.invoke, so route its sendMessageFromView through the
+    // same browser handlers to keep folder picking working from the dialog.
+    if (key === "electronBridge" && isRecord(api)) {
+      Reflect.set(window, key, {
+        ...api,
+        sendMessageFromView: handleMessageFromView,
+      });
+      return;
+    }
+    Reflect.set(window, key, api);
   },
 };
 

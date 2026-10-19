@@ -33,8 +33,10 @@ function errorMessage(error: unknown): string {
 function WorkspaceRootDialog({
   listDirectory,
   onClose,
+  nested,
 }: WorkspaceRootDialogOptions & {
   onClose: (value: string | null) => void;
+  nested: boolean;
 }): React.ReactElement {
   const [directoryPath, setDirectoryPath] = useState<string | null>(null);
   const [userSelectedPath, setUserSelectedPath] = useState<string | null>(null);
@@ -100,13 +102,13 @@ function WorkspaceRootDialog({
           "extension:bg-token-editor-background/80",
           "electron:bg-[#00000022]",
           "codex-dialog-overlay",
-          "fixed",
+          nested ? "absolute" : "fixed",
           "inset-0",
-          "z-50",
+          "z-[1000]",
         ].join(" ")}
         data-state="open"
         onClick={() => onClose(null)}
-        style={{ pointerEvents: "auto" }}
+        style={{ pointerEvents: "auto", zIndex: 1000 }}
       />
       <div
         aria-describedby={DESCRIPTION_ID}
@@ -114,13 +116,13 @@ function WorkspaceRootDialog({
         aria-modal="true"
         className={[
           "codex-dialog",
-          "left-1/2",
-          "top-1/2",
-          "z-50",
-          "-translate-x-1/2",
-          "-translate-y-1/2",
+          nested ? "inset-0" : "left-1/2",
+          nested ? "" : "top-1/2",
+          "z-[1001]",
+          nested ? "" : "-translate-x-1/2",
+          nested ? "" : "-translate-y-1/2",
           "outline-none",
-          "fixed",
+          nested ? "absolute" : "fixed",
           "bg-token-dropdown-background/90",
           "text-token-foreground",
           "ring-token-border",
@@ -130,12 +132,18 @@ function WorkspaceRootDialog({
           "ring-token-border",
           "shadow-lg",
           "backdrop-blur-xl",
-          "w-[520px]",
+          nested ? "w-full" : "w-[520px]",
         ].join(" ")}
         data-state="open"
         ref={dialogRef}
         role="dialog"
-        style={{ pointerEvents: "auto" }}
+        style={{
+          pointerEvents: "auto",
+          zIndex: 1001,
+          ...(nested
+            ? { width: "100%", minHeight: "min(520px, 80vh)", overflow: "auto" }
+            : {}),
+        }}
         tabIndex={-1}
       >
         <form
@@ -516,13 +524,15 @@ function WorkspaceRootDialog({
   );
 }
 
-function ensureHost(): HTMLElement {
+function ensureHost(parent: HTMLElement): HTMLElement {
   const DIALOG_ID = "codex-web-workspace-root-dialog";
   let element = document.getElementById(DIALOG_ID);
   if (!element) {
     element = document.createElement("div");
     element.id = DIALOG_ID;
-    document.body.append(element);
+    parent.append(element);
+  } else if (element.parentElement !== parent) {
+    parent.append(element);
   }
   return element;
 }
@@ -537,6 +547,11 @@ export async function openSelectWorkspaceRootDialog({
   listDirectory,
 }: WorkspaceRootDialogOptions): Promise<string | null> {
   const activeElement = document.activeElement;
+  const parentDialog =
+    activeElement instanceof HTMLElement
+      ? activeElement.closest<HTMLElement>('[role="dialog"]')
+      : null;
+  const nested = parentDialog !== null;
 
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -561,10 +576,14 @@ export async function openSelectWorkspaceRootDialog({
     };
   })();
 
-  const reactRoot = createRoot(ensureHost());
+  const reactRoot = createRoot(ensureHost(parentDialog ?? document.body));
   reactRoot.render(
     <QueryClientProvider client={queryClient}>
-      <WorkspaceRootDialog listDirectory={listDirectory} onClose={resolveFn} />
+      <WorkspaceRootDialog
+        listDirectory={listDirectory}
+        nested={nested}
+        onClose={resolveFn}
+      />
     </QueryClientProvider>,
   );
 
