@@ -303,7 +303,25 @@ export function createBrowserAdapter(emit: (message: RecordValue) => void) {
   );
   return {
     adaptServices(services: RecordValue) {
-      return { ...services, browserHost };
+      // Code-block "copy" calls appServices.clipboard.writeText, an RPC that
+      // reaches the headless Codex app-server (no OS clipboard on the WSL
+      // backend), so it rejects and the app shows "Couldn't copy to clipboard".
+      // Route clipboard writes through the browser clipboard instead; the shim
+      // already patches navigator.clipboard.writeText with an execCommand
+      // fallback for focus/permission edge cases. Other clipboard methods keep
+      // delegating to the original RPC service.
+      const originalClipboard = services.clipboard;
+      const clipboard = new Proxy(originalClipboard ?? {}, {
+        get(target, property, receiver) {
+          if (property === "writeText") {
+            return (text: unknown) =>
+              navigator.clipboard.writeText(String(text ?? ""));
+          }
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      return { ...services, browserHost, clipboard };
     },
     open(p: RecordValue) {
       const value = page(p);

@@ -5,6 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const ts = require("typescript");
 let createBrowserAdapter;
+let copiedText;
 before(async () => {
   const links = ts.transpileModule(
     await fs.readFile(
@@ -46,6 +47,14 @@ before(async () => {
     Symbol,
     queueMicrotask,
     window: { location: { href: "http://localhost:8214/thread/test" } },
+    navigator: {
+      clipboard: {
+        writeText: (text) => {
+          copiedText = text;
+          return Promise.resolve();
+        },
+      },
+    },
   });
   ({ createBrowserAdapter } = module.exports);
 });
@@ -59,6 +68,23 @@ test("native services retain other RPC services and provide disposable registrat
   assert.equal(typeof registration[Symbol.dispose], "function");
   registration[Symbol.dispose]();
   await registration.updateBounds({});
+});
+test("native services route clipboard writes through the browser clipboard", async () => {
+  const adapter = createBrowserAdapter(() => {});
+  const rpcCalls = [];
+  const existing = {
+    clipboard: {
+      readText: () => {
+        rpcCalls.push("readText");
+        return Promise.resolve("from-rpc");
+      },
+    },
+  };
+  const services = adapter.adaptServices(existing);
+  await services.clipboard.writeText("copy me");
+  assert.equal(copiedText, "copy me");
+  assert.equal(await services.clipboard.readText(), "from-rpc");
+  assert.deepEqual(rpcCalls, ["readText"]);
 });
 test("browser commands and history stay scoped to the correct chat and tab", () => {
   const events = [];
