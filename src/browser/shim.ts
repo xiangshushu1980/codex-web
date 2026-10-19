@@ -13,6 +13,62 @@ import {
   type WorkspaceDirectoryEntries,
 } from "./workspace-root-dialog";
 
+let developmentNoticeTimeout: number | undefined;
+
+function showDevelopmentNotice(): void {
+  const noticeId = "codex-web-development-notice";
+  let notice = document.getElementById(noticeId);
+
+  if (notice == null) {
+    notice = document.createElement("div");
+    notice.id = noticeId;
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "polite");
+    Object.assign(notice.style, {
+      position: "fixed",
+      left: "50%",
+      bottom: "24px",
+      transform: "translateX(-50%)",
+      zIndex: "2147483647",
+      padding: "10px 16px",
+      borderRadius: "8px",
+      background: "#252525",
+      color: "white",
+      boxShadow: "0 4px 16px #0005",
+      font: "14px/1.4 system-ui, sans-serif",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(notice);
+  }
+
+  notice.textContent = "Under development";
+  notice.style.display = "block";
+  window.clearTimeout(developmentNoticeTimeout);
+  developmentNoticeTimeout = window.setTimeout(() => {
+    notice?.remove();
+  }, 2200);
+}
+
+document.addEventListener(
+  "click",
+  (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const toggle = target.closest(
+      '[aria-label="显示/隐藏底部面板"], [aria-label="Toggle bottom panel"]',
+    );
+    if (toggle != null) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showDevelopmentNotice();
+    }
+  },
+  true,
+);
+
 type IpcListener = (event: unknown, ...args: unknown[]) => void;
 
 type RendererToMainMessage =
