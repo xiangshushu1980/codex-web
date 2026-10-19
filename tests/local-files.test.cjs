@@ -325,6 +325,13 @@ test("plain local HTML opens in the existing sidebar; explicit targets and sourc
   const end = source.indexOf("  if (r != null && A && qi(T)", start);
   assert.ok(start > 0 && end > start);
   const events = [];
+  const findType = (node, type) => {
+    if (!node || typeof node !== "object") return false;
+    if (node.type === type) return true;
+    const children = node.props?.children;
+    const arr = Array.isArray(children) ? children : children == null ? [] : [children];
+    return arr.some((child) => findType(child, type));
+  };
   const context = {
     r: {},
     A: false,
@@ -339,6 +346,7 @@ test("plain local HTML opens in the existing sidebar; explicit targets and sourc
     D: null,
     u: null,
     k: null,
+    N: { conversationId: "conv1" },
     x: () => {},
     Kj() {},
     Fj() {},
@@ -348,10 +356,18 @@ test("plain local HTML opens in the existing sidebar; explicit targets and sourc
     Zp: path.resolve,
     URL,
     encodeURIComponent,
-    window: { location: { href: "http://localhost:8214/" } },
+    window: {
+      location: { href: "http://localhost:8214/" },
+      __ELECTRON_SHIM__: {
+        browserAdapter: { open() {}, attachFrame() {}, handle() {} },
+      },
+    },
     Mj: (kind, Component, options) => ({ kind, Component, ...options }),
     Gj: (_scope, type, options) => events.push({ type, options }),
-    W: () => ({ jsx: (type, props) => ({ type, props }) }),
+    W: () => ({
+      jsx: (type, props) => ({ type, props }),
+      jsxs: (type, props) => ({ type, props }),
+    }),
   };
   const run = () =>
     vm.runInNewContext(`(function(){${source.slice(start, end)};})()`, context);
@@ -362,8 +378,8 @@ test("plain local HTML opens in the existing sidebar; explicit targets and sourc
     "http://localhost:8214/@fs/tmp/page.html",
   );
   assert.equal(
-    events[0].type.Component(events[0].options.props).type,
-    "iframe",
+    findType(events[0].type.Component(events[0].options.props), "iframe"),
+    true,
   );
   assert.equal(events[0].options.revealAndFocus, true);
   for (const field of ["O", "v", "A"]) {

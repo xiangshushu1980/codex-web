@@ -13,6 +13,49 @@ import {
   type WorkspaceDirectoryEntries,
 } from "./workspace-root-dialog";
 
+function installClipboardFallback(): void {
+  const clipboard = navigator.clipboard;
+  const nativeWriteText = clipboard?.writeText?.bind(clipboard);
+
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: new Proxy(clipboard ?? {}, {
+      get(target, property, receiver) {
+        if (property !== "writeText") {
+          const value = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        }
+
+        return (text: string): Promise<void> => {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          Object.assign(textarea.style, {
+            position: "fixed",
+            left: "-9999px",
+            top: "0",
+          });
+          document.body.append(textarea);
+          textarea.focus();
+          textarea.select();
+          let copied = false;
+          try {
+            copied = document.execCommand("copy");
+          } catch {
+            copied = false;
+          } finally {
+            textarea.remove();
+          }
+          if (copied) return Promise.resolve();
+          if (nativeWriteText) return nativeWriteText(text);
+          return Promise.reject(new Error("Clipboard copy is unavailable"));
+        };
+      },
+    }),
+  });
+}
+
+installClipboardFallback();
+
 let developmentNoticeTimeout: number | undefined;
 
 function showDevelopmentNotice(): void {

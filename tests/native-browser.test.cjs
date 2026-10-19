@@ -86,6 +86,33 @@ test("native services route clipboard writes through the browser clipboard", asy
   assert.equal(await services.clipboard.readText(), "from-rpc");
   assert.deepEqual(rpcCalls, ["readText"]);
 });
+test("attachFrame makes an in-tree iframe the command target", () => {
+  const events = [];
+  const adapter = createBrowserAdapter((e) => events.push(e));
+  const route = { conversationId: "chat1", browserTabId: "page1" };
+  adapter.open({ ...route, url: "file:///tmp/one.html" });
+  let reloaded = 0;
+  const frame = {
+    addEventListener() {},
+    contentDocument: undefined,
+    contentWindow: {
+      location: {
+        reload: () => {
+          reloaded++;
+        },
+      },
+    },
+  };
+  adapter.attachFrame({ ...route, frame });
+  // Registering the same frame again must not re-wire listeners.
+  adapter.attachFrame({ ...route, frame });
+  adapter.handle({
+    type: "browser-sidebar-command",
+    ...route,
+    command: { type: "reload" },
+  });
+  assert.equal(reloaded, 1);
+});
 test("browser commands and history stay scoped to the correct chat and tab", () => {
   const events = [];
   const adapter = createBrowserAdapter((e) => events.push(e));

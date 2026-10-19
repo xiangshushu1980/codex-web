@@ -14,6 +14,7 @@ type Page = {
   clearHighlight?: () => void;
   overlay?: HTMLElement;
   suspended?: boolean;
+  mountGeneration?: number;
 };
 
 export function createBrowserAdapter(emit: (message: RecordValue) => void) {
@@ -88,15 +89,17 @@ export function createBrowserAdapter(emit: (message: RecordValue) => void) {
     if (!frame) return;
     try {
       const doc = frame.contentDocument;
-      if (!doc) throw new Error("此页面不允许选择元素，请在外部浏览器打开。");
-      const loadedUrl = frame.contentWindow!.location.href;
+      const win = frame.contentWindow;
+      if (!doc || !win)
+        throw new Error("此页面不允许选择元素，请在外部浏览器打开。");
+      const loadedUrl = win.location.href;
       if (loadedUrl !== p.url) {
         p.history.splice(p.index + 1);
         p.history.push(loadedUrl);
         p.index = p.history.length - 1;
       }
       p.title = doc.title || new URL(p.url).pathname.split("/").pop() || "网页";
-      p.url = frame.contentWindow!.location.href;
+      p.url = win.location.href;
       let previous: HTMLElement | undefined;
       let outline = "";
       const clear = () => {
@@ -272,8 +275,14 @@ export function createBrowserAdapter(emit: (message: RecordValue) => void) {
       },
       async syncView(p: RecordValue) {
         const value = page(p);
+        value.mountGeneration = p.mountGeneration;
+        // Only acknowledge attachment for a frame that is actually mounted in
+        // the live host. A stale frame left over from a disposed host (e.g.
+        // after the sidebar was toggled closed and reopened) must not be
+        // reported as attached, otherwise the upstream presentation handoff
+        // waits on a dead webview and the panel never reveals.
         if (
-          value.frame &&
+          value.frame?.isConnected &&
           value.frame.dataset.attached !== String(p.mountGeneration)
         ) {
           value.frame.dataset.attached = String(p.mountGeneration);
@@ -329,6 +338,16 @@ export function createBrowserAdapter(emit: (message: RecordValue) => void) {
     },
     createWebview(p: RecordValue) {
       const value = page(p);
+      // A previous host may have been disposed (sidebar toggled closed, tab
+      // closed, or a prewarm handoff) while our page entry survived. Drop any
+      // orphaned frame so exactly one iframe is live per tab; otherwise two
+      // frames fight over the same page state and the panel can go blank or
+      // stop responding after a toggle.
+      if (value.frame) {
+        value.clearHighlight = undefined;
+        value.frame.remove();
+        value.frame = undefined;
+      }
       const frame = document.createElement("iframe");
       frame.title = "Codex 浏览器";
       frame.style.border = "0";
@@ -352,7 +371,36 @@ export function createBrowserAdapter(emit: (message: RecordValue) => void) {
       if (value.url) frame.src = value.url;
       return frame;
     },
+    // Register an iframe that the page renders itself (in the React tree) as
+    // this tab's live frame. This is the robust path: the page content is a
+    // normal in-tree iframe, not the upstream fixed-overlay webview host, so
+    // toggling the sidebar or first paint cannot leave a stale/mispositioned
+    // overlay. Toolbar commands from the page go through handle() and drive
+    // this frame via value.frame.
+    attachFrame(p: RecordValue) {
+      const value = page(p);
+      const frame = p.frame as HTMLIFrameElement | null | undefined;
+      if (!frame || value.frame === frame) return;
+      value.frame = frame;
+      frame.addEventListener("load", () => bindDocument(value));
+      const doc = frame.contentDocument;
+      if (doc && doc.readyState === "complete") bindDocument(value);
+      snapshot(value);
+    },
     handle(message: RecordValue) {
+      // The upstream host tears down its webview (e.g. when the sidebar panel
+      // unmounts) and announces it with this message. Clear our frame reference
+      // so a later syncView/createWebview never reattaches or acknowledges a
+      // dead frame; the page (url/history) is kept so reopening restores it.
+      if (
+        message.type === "browser-sidebar-webview-destroyed" &&
+        pages.has(key(message))
+      ) {
+        const value = page(message);
+        value.clearHighlight = undefined;
+        value.frame = undefined;
+        return true;
+      }
       if (
         message.type !== "browser-sidebar-command" ||
         !pages.has(key(message))
