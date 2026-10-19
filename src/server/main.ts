@@ -17,6 +17,7 @@ import Fastify from "fastify";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { installModuleAliasHook } from "./module";
+import { registerLocalFiles } from "./local-files";
 
 type ServerOptions = {
   host: string;
@@ -413,6 +414,7 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
   const bridgeState = getIpcMainBridgeState();
   const app = Fastify({ logger: false });
   const websocketServer = new WebSocketServer({ noServer: true });
+  registerLocalFiles(app);
 
   await app.register(fastifyMultipart, {
     limits: {

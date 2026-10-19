@@ -1,3 +1,4 @@
+import { installLocalFileLinks, openLocalFile } from "./local-files";
 import {
   mapBrowserPathToInitialRoute,
   mapMemoryPathToBrowserPath,
@@ -10,6 +11,8 @@ import {
   openSelectWorkspaceRootDialog,
   type WorkspaceDirectoryEntries,
 } from "./workspace-root-dialog";
+
+installLocalFileLinks();
 
 type IpcListener = (event: unknown, ...args: unknown[]) => void;
 
@@ -156,6 +159,19 @@ function unimplemented(method: string): never {
 }
 
 export function emitRendererEvent(channel: string, args: unknown[]): void {
+  const message = args[0];
+  if (
+    channel === "codex_desktop:message-for-view" &&
+    isRecord(message) &&
+    message.type === "codex-web-open-file" &&
+    typeof message.path === "string"
+  ) {
+    openLocalFile(
+      message.path,
+      typeof message.line === "number" ? message.line : undefined,
+    );
+    return;
+  }
   const listeners = rendererListeners.get(channel);
   if (!listeners || listeners.size === 0) {
     return;
@@ -382,7 +398,10 @@ const buildFlavor: "prod" | "dev" | "agent" | string = "prod";
 
 function handleMessageFromView(message: unknown): Promise<unknown> {
   if (isOpenInBrowserMessage(message)) {
-    window.open(message.url, "_blank", "noopener,noreferrer");
+    if (!openLocalFile(message.url, undefined, true)) {
+      window.open(message.url, "_blank", "noopener,noreferrer");
+    }
+    return Promise.resolve();
   }
 
   if (isLocalFilePickerMessage(message)) {

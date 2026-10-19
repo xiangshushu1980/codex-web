@@ -1,5 +1,7 @@
 # codex-web
 
+本地维护文档：[项目文档入口](docs/README.md) · [WSL/Windows 文件访问](docs/file-access.md) · [开发与运行](docs/development.md)
+
 a browser frontend for codex desktop, running on a machine you control.
 
 https://github.com/user-attachments/assets/0a33cbd8-741c-412c-9e75-46dfe9324596

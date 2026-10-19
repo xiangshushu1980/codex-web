@@ -1,5 +1,7 @@
 # architecture
 
+Local WSL/browser adaptations and current source map: [development guide](docs/development.md). File previews and downloads: [file access](docs/file-access.md).
+
 a bit on how this whole thing is put together.
 
 the general approach here is to download the electron app, unpack it and apply
