@@ -1,0 +1,9 @@
+--- a/webview/assets/app-shared-8bd9d0399038.js
++++ b/webview/assets/app-shared-8bd9d0399038.js
+@@ -156291,1 +156291,5 @@
+-        ? { success: !1 }
++        ? {
++            // Browser hosts have no desktop archive service. Confirm the thread
++            // is absent from the host before accepting the inactive archive.
++            success: !(await i()).some((e) => e.id === t),
++          }
