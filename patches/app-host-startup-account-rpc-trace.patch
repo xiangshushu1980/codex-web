@@ -1,0 +1,45 @@
+--- a/.vite/build/main-CqEoQDOU.js
++++ b/.vite/build/main-CqEoQDOU.js
+@@ -154571,7 +154571,23 @@
+         e.method === `getAuthStatus` ||
+         e.method === `configRequirements/read`
+       ) {
+-        let r = await this.desktopAccount.getAuth();
++        let startupRead = e.method === `account/read` || e.method === `getAuthStatus`,
++          startupStarted = performance.now(),
++          startupLog = (stage, extra = {}) =>
++            startupRead &&
++            console.info(`[startup][account-rpc] ${stage}`, {
++              method: e.method,
++              requestId: e.id,
++              elapsedMs: Math.round(performance.now() - startupStarted),
++              ...extra,
++            });
++        startupLog(`started`);
++        let startupAuthStarted = performance.now(),
++          r = await this.desktopAccount.getAuth();
++        startupLog(`auth_resolved`, {
++          authMs: Math.round(performance.now() - startupAuthStarted),
++          hasAuth: r != null,
++        });
+         n.throwIfAborted();
+         let a = r == null ? null : i.ri(r.token);
+         if (
+@@ -154583,8 +154599,15 @@
+           throw Error(`App server account changed`);
+         let s = AbortSignal.any([n, r.signal]);
+         (s.throwIfAborted(), o(r.signal));
+-        let c = await i.xi(this.desktopAccount.read(e.method), s);
+-        return (s.throwIfAborted(), { id: e.id, result: c });
++        let startupReadStarted = performance.now(),
++          c = await i.xi(this.desktopAccount.read(e.method), s);
++        startupLog(`desktop_read_resolved`, {
++          readMs: Math.round(performance.now() - startupReadStarted),
++        });
++        s.throwIfAborted();
++        let startupResult = { id: e.id, result: c };
++        startupLog(`completed`);
++        return startupResult;
+       }
+       let s = Date.now(),
+         c =

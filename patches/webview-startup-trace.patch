@@ -1,0 +1,277 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -280023,6 +280023,7 @@
+   p5i ||
+     nq.hasReached(e) ||
+     (nq.reach(e),
++    startupTrace(`renderer_phase_${e}`),
+     Pd?.startup?.reach(e)?.catch((t) => {
+       gr.warning(`Failed to report renderer startup phase`, {
+         safe: { phase: e },
+@@ -497742,6 +497743,35 @@
+   return (sHs = e(() => {}))();
+ }
+ function X6(e) {
++  (0, m8.useEffect)(() => {
++    let t = window.__codexStartupSuspenseEvents;
++    return (
++      t && t.length < 80 &&
++        t.push({
++          name: e.debugName ?? `undefined`,
++          event: `mounted`,
++          at: Math.round(performance.now()),
++        }),
++      () => {
++        t && t.length < 80 &&
++          t.push({
++            name: e.debugName ?? `undefined`,
++            event: `cleared`,
++            at: Math.round(performance.now()),
++          });
++      }
++    );
++  }, [e.debugName]);
++  window.__codexStartupSuspenseFallbacks &&
++    !window.__codexStartupSuspenseFallbacks.some((t) => t.name === e.debugName) &&
++    window.__codexStartupSuspenseFallbacks.push({
++      name: e.debugName,
++      at: Math.round(performance.now()),
++    });
++  e.debugName === `Startup` &&
++    !window.__codexStartupTraceFallback &&
++    ((window.__codexStartupTraceFallback = !0),
++    startupTrace(`startup_suspense_fallback_rendered`));
+   let t = (0, cHs.c)(2),
+     { debugName: n } = e,
+     r;
+@@ -504859,6 +504889,7 @@
+     u = null,
+     d;
+   try {
++    startupTrace(`statsig_bootstrap_race_started`);
+     ({ statsigPayload: d } = await Promise.race([
+       _zr(
+         {
+@@ -504880,11 +504911,15 @@
+           let e = Error(
+             `Timed out while fetching post-login Statsig bootstrap`,
+           );
+-          (l.abort(e), t(e));
++          (startupTrace(`statsig_bootstrap_race_timed_out`),
++            l.abort(e),
++            t(e));
+         }, iZs);
+       }),
+     ]));
++    startupTrace(`statsig_bootstrap_race_resolved`);
+   } catch (e) {
++    startupTrace(`statsig_bootstrap_race_failed_${e?.name ?? `unknown`}`);
+     throw new f8(
+       zfe.CODEX_POST_LOGIN_STATSIG_BOOTSTRAP_FAILURE_TYPE_REQUEST_FAILED,
+       e,
+@@ -504894,7 +504929,10 @@
+   }
+   try {
+     let { user: e } = eZs.parse(JSON.parse(d));
+-    return { statsigPayload: d, user: e };
++    return (
++      startupTrace(`statsig_bootstrap_payload_parsed`),
++      { statsigPayload: d, user: e }
++    );
+   } catch (e) {
+     throw new f8(
+       zfe.CODEX_POST_LOGIN_STATSIG_BOOTSTRAP_FAILURE_TYPE_RESPONSE_INVALID,
+@@ -505644,8 +505682,23 @@
+           : o?.platform === `linux`
+             ? `Linux`
+             : o?.platform,
+-    f = i?.systemVersion ?? o?.osVersion;
+-  if (r.isLoading || a || s || c) {
++    f = i?.systemVersion ?? o?.osVersion,
++    startupMetadataPending = r.isLoading || a || s || c,
++    startupMetadataState = `auth=${!!r.isLoading} appInfo=${!!a} systemInfo=${!!s} statsigContext=${!!c}`;
++  window.__codexStartupMetadataLast !== startupMetadataState &&
++    ((window.__codexStartupMetadataLast = startupMetadataState),
++    startupTrace(`startup_metadata_gate_state ${startupMetadataState}`));
++  startupMetadataPending && !window.__codexStartupMetadataGatePending
++    ? ((window.__codexStartupMetadataGatePending = !0),
++      startupTrace(
++        `startup_metadata_gate_pending auth=${!!r.isLoading} appInfo=${!!a} systemInfo=${!!s} statsigContext=${!!c}`,
++      ))
++    : !startupMetadataPending &&
++      window.__codexStartupMetadataGatePending &&
++      !window.__codexStartupMetadataGateResolved &&
++      ((window.__codexStartupMetadataGateResolved = !0),
++      startupTrace(`startup_metadata_gate_resolved`));
++  if (startupMetadataPending) {
+     let e;
+     return (
+       t[0] === Symbol.for(`react.memo_cache_sentinel`)
+@@ -506143,6 +506196,15 @@
+   t[24] === h ? (x = t[25]) : ((x = DQs(h)), (t[24] = h), (t[25] = x));
+   let { client: S, isLoading: C } = (0, AQs.useClientAsyncInit)(d, b, x),
+     w;
++  C &&
++    !window.__codexStatsigAsyncInitPending &&
++    ((window.__codexStatsigAsyncInitPending = !0),
++    startupTrace(`statsig_client_async_init_pending`));
++  !C &&
++    window.__codexStatsigAsyncInitPending &&
++    !window.__codexStatsigAsyncInitResolved &&
++    ((window.__codexStatsigAsyncInitResolved = !0),
++    startupTrace(`statsig_client_async_init_resolved`));
+   t[26] === S
+     ? (w = t[27])
+     : ((w = () => S.getContext().user), (t[26] = S), (t[27] = w));
+@@ -506156,17 +506218,22 @@
+           if (S == null) return;
+           let e = !1,
+             t = (e) => {
+-              e.status === `Ready` && E(b);
++              e.status === `Ready` &&
++                (startupTrace(`statsig_values_updated_ready`), E(b));
+             };
+           S.on(`values_updated`, t);
+           try {
+             let t = S.getContext().user;
+             (0, jQs.default)(t, OQs(b)) ||
++              (startupTrace(`statsig_update_user_started`),
+               S.updateUserAsync(b)
+-                .then(bQs)
++                .then((e) => (
++                  startupTrace(`statsig_update_user_resolved`), bQs(e)
++                ))
+                 .finally(() => {
+-                  e || E(b);
+-                });
++                  startupTrace(`statsig_update_user_finally`),
++                    e || E(b);
++                }));
+           } catch (e) {
+             let t = e;
+             gr.error(`Statsig: error while checking/updating user`, {
+@@ -506257,12 +506324,16 @@
+     g;
+   t[0] !== p || t[1] !== l
+     ? ((g = async (e) => {
++        startupTrace(`post_login_statsig_bootstrap_started`);
+         let t = await SQs(e, h);
++        startupTrace(`post_login_statsig_bootstrap_resolved`);
+         try {
+           let e = new AQs.StatsigClient(l, t.user, DQs(p));
++          e.dataAdapter.setData(t.statsigPayload);
++          let r = e.initializeSync();
+           return (
+-            e.dataAdapter.setData(t.statsigPayload),
+-            nZs(e.initializeSync(), `electron`),
++            startupTrace(`post_login_statsig_initialize_sync_${r.success ? `success` : `failed`}`),
++            nZs(r, `electron`),
+             e
+           );
+         } catch (e) {
+@@ -538961,6 +539032,7 @@
+     o = (0, $gc.useSyncExternalStore)(nq.subscribe, nq.getSnapshot, Zgc),
+     s;
+   return (
++    (n === `first_content_visible` && SCe.indexOf(o) >= SCe.indexOf(n) && !window.__codexStartupTraceVisible && (window.__codexStartupTraceVisible = !0, startupTrace("first_content_boundary_rendered"))),
+     t[0] !== a || t[1] !== r || t[2] !== o || t[3] !== n
+       ? ((s =
+           a || SCe.indexOf(o) >= SCe.indexOf(n)
+@@ -550016,6 +550088,7 @@
+             level: `info`,
+             message: `[startup][renderer] app routes mounted after ${Math.round(performance.now())}ms`,
+           }),
++          startupTrace("app_routes_mounted"),
+           Ho.dispatchMessage(`ready`, {
+             persistedStateResponsePriority: kkc ? `critical` : void 0,
+           }));
+@@ -555002,6 +555075,9 @@
+   }))();
+ }
+ function GPc(e) {
++  !window.__codexStartupTraceRoot &&
++    ((window.__codexStartupTraceRoot = !0),
++    startupTrace(`app_root_component_render`));
+   let t = (0, F5.c)(54),
+     { startupReady: n } = e === void 0 ? {} : e;
+   n != null && (0, I5.use)(n);
+@@ -556317,9 +556393,49 @@
+       (EFc = iF === ur));
+   }))();
+ }
++function startupTrace(e) {
++  let t = Math.round(performance.now()),
++    n = "";
++  if (e === `renderer_entry` && typeof PerformanceObserver !== "undefined") {
++    window.__codexStartupLongTasks = [];
++    window.__codexStartupSuspenseFallbacks = [];
++    window.__codexStartupSuspenseEvents = [];
++    try {
++      new PerformanceObserver((r) => {
++        for (let i of r.getEntries())
++          window.__codexStartupLongTasks.length < 40 &&
++            window.__codexStartupLongTasks.push({
++              startMs: Math.round(i.startTime),
++              durationMs: Math.round(i.duration),
++            });
++      }).observe({ type: "longtask", buffered: true });
++    } catch {}
++  }
++  if (e === `renderer_phase_first_content_visible`) {
++    let r = performance
++        .getEntriesByType(`resource`)
++        .filter((e) => e.initiatorType === `script`),
++      i = Math.round(Math.max(0, ...r.map((e) => e.startTime))),
++      a = window.__codexStartupLongTasks || [],
++      o = Math.round(a.reduce((e, t) => e + t.durationMs, 0)),
++      s = (window.__codexStartupSuspenseFallbacks || [])
++        .map((e) => `${e.name}@${e.at}`)
++        .join(","),
++      c = (window.__codexStartupSuspenseEvents || [])
++        .map((e) => `${e.name}:${e.event}@${e.at}`)
++        .join(",");
++    n = ` scripts=${r.length} latestScriptStartMs=${i} longTasks=${a.length} longTaskTotalMs=${o} longTaskMaxMs=${Math.max(0, ...a.map((e) => e.durationMs))} suspenseFallbacks=${s} suspenseEvents=${c}`;
++  }
++  Ho.dispatchMessage("log-message", {
++    level: "info",
++    message: "[startup][trace] " + e + " at " + t + "ms" + n,
++  });
++}
+ async function OFc() {
++  startupTrace("renderer_entry");
+   (kFc(), await MFc());
+   let e;
++  startupTrace("route_prefetch_start");
+   return (
+     (e = IFc ? FFs.prefetch() : LFc ? IFs.prefetch() : EJa?.()),
+     (e = e?.catch((e) => {
+@@ -556333,9 +556449,11 @@
+       });
+     })),
+     await tVe(),
++    startupTrace("host_services_resolved"),
+     k1n(),
+     AFc(),
+     !IFc && !LFc && e != null && (await e),
++    startupTrace("route_prefetch_resolved"),
+     jFc()
+   );
+ }
+@@ -556350,6 +556468,7 @@
+   (vs.markInitializationPhase(`host_services_ready`), fOe(), I_e());
+ }
+ function jFc() {
++  startupTrace("react_root_requested");
+   gr.info(`[statsig-refresh-diagnostics] React root render requested`, {
+     safe: { windowType: `electron` },
+   });
+@@ -556365,7 +556484,8 @@
+               r instanceof PerformanceNavigationTiming &&
+               r.type === `navigate` &&
+               vs.setHostStartupTiming(n, HFc),
+-              vs.markInitializationPhase(`host_startup_ready`));
++              vs.markInitializationPhase(`host_startup_ready`),
++              startupTrace("host_startup_ready"));
+           } catch (e) {
+             t.e = e;
+           } finally {

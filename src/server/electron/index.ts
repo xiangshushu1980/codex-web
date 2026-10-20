@@ -71,6 +71,7 @@ function getIpcMainBridgeState(): IpcMainBridgeState {
 }
 
 function log(method: string, args: unknown[]): void {
+  if (process.env.CODEX_WEB_ELECTRON_DEBUG !== "1") return;
   console.log(`[electron-main-stub] ${method}`, args);
 }
 

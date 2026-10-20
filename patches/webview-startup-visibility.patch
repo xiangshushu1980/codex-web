@@ -1,0 +1,11 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -556440,5 +556440,7 @@
+   Ho.dispatchMessage("log-message", {
+     level: "info",
+-    message: "[startup][trace] " + e + " at " + t + "ms" + n,
++    message: "[startup][trace] " + e + " at " + t + "ms" + n +
++      " browserVisibility=" + document.visibilityState +
++      " navigationStartMs=" + Math.round(performance.timeOrigin),
+   });
+ }

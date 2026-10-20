@@ -1,0 +1,250 @@
+--- a/.vite/build/main-CqEoQDOU.js
++++ b/.vite/build/main-CqEoQDOU.js
+@@ -35018,11 +35018,33 @@
+         Error(`HTTP requests must use the HTTP fetch service.`)
+       );
+     }
+-    async fetchHttp(e, t, n, i, a) {
++    async fetchHttp(e, t, n, i, a, webContentsId) {
+       let o = this.ensureAbsoluteUrl(t.url),
+         s = Tv(t.method, o),
+         c = performance.now(),
+-        l = null;
++        l = null,
++        v = new Set([
++          `/backend-api/pets`,
++          `/backend-api/settings/user`,
++          `/backend-api/automations`,
++          `/backend-api/accounts/optimized/check`,
++          `/backend-api/referrals/invite/eligibility`,
++          `/backend-api/beacons/home`,
++          `/backend-api/subscriptions`,
++          `/backend-api/gift-credits/senders/eligibility`,
++          `/backend-api/payments/payment_methods`,
++          `/backend-api/checkout_pricing_config/configs/USD`,
++          `/backend-api/subscriptions/auto_top_up/settings`,
++          `/backend-api/wham/statsig/bootstrap`,
++        ]).has(new URL(o).pathname);
++      v && Ev().info(`[startup][http-trace] request started`, {
++        safe: {
++          path: new URL(o).pathname,
++          requestId: e,
++          webContentsId: webContentsId ?? null,
++        },
++        sensitive: {},
++      });
+       try {
+         let { headers: u, body: d } = this.prepareFetchInit(t);
+         Ev().debug(`Fetch`, {
+@@ -35055,7 +35077,43 @@
+           m = f == null ? await p() : await f.run(`host.request`, p);
+         l = m.metrics;
+         let h = m.response,
+-          g = Wde(h);
++          g = Wde(h),
++          elapsedMs = Ov(c),
++          safePath = new URL(o).pathname.replace(/\/[^/]{65,}/g, `/[redacted]`);
++        elapsedMs >= 1500 &&
++          Ev().info(`[startup][http-trace] slow request completed`, {
++            safe: {
++              path: safePath,
++              requestId: e,
++              webContentsId: webContentsId ?? null,
++              status: h.status,
++              totalMs: elapsedMs,
++            },
++            sensitive: {},
++          });
++        v && Ev().info(`[startup][http-trace] response received`, {
++          safe: {
++            path: new URL(o).pathname,
++            requestId: e,
++            webContentsId: webContentsId ?? null,
++            status: h.status,
++            totalMs: performance.now() - c,
++          },
++          sensitive: {},
++        });
++        if (v && new URL(o).pathname === `/backend-api/wham/statsig/bootstrap`) {
++          Ev().info(`[startup][http-trace] response headers`, {
++            safe: {
++              path: new URL(o).pathname,
++              requestId: e,
++              webContentsId: webContentsId ?? null,
++              contentLength: h.headers.get(`content-length`),
++              contentType: h.headers.get(`content-type`),
++              transferEncoding: h.headers.get(`transfer-encoding`),
++            },
++            sensitive: {},
++          });
++        }
+         if (
+           h.ok ||
+           h.status === 304 ||
+@@ -35093,7 +35138,7 @@
+               responseType: `stream-open`,
+               status: h.status,
+               target: s,
+-              totalMs: Ov(c),
++              totalMs: performance.now() - c,
+             }),
+             {
+               response: new Response(h.body, {
+@@ -35134,12 +35179,21 @@
+               responseType: `error`,
+               status: h.status,
+               target: s,
+-              totalMs: Ov(c),
++              totalMs: performance.now() - c,
+             }),
+             a
+           );
+         }
+       } catch (t) {
++        v && Ev().info(`[startup][http-trace] request failed`, {
++          safe: {
++            path: new URL(o).pathname,
++            requestId: e,
++            webContentsId: webContentsId ?? null,
++            totalMs: performance.now() - c,
++          },
++          sensitive: { error: t },
++        });
+         let n = t instanceof Error && t.name === `AbortError`,
+           i = kv(t),
+           a = t instanceof k_ ? t : null,
+@@ -35162,7 +35216,7 @@
+             responseType: `exception`,
+             status: a?.status ?? (n ? 499 : 500),
+             target: s,
+-            totalMs: Ov(c),
++            totalMs: performance.now() - c,
+           }),
+           o
+         );
+@@ -36217,24 +36271,82 @@
+   return (0, y.existsSync)(i) ? i : null;
+ }
+ var Qde = class extends l.Pt {
++  webContentsId;
++  constructor(e) {
++    (super(), (this.webContentsId = e));
++  }
+   async get() {
+-    let e = p.t.resolve();
+-    return {
+-      version: i.Ti(g.ft()).version,
+-      buildNumber: g.et.value,
+-      buildFlavor: e,
+-      osName: dt(process.platform) ?? null,
+-      systemVersion:
+-        typeof process.getSystemVersion == `function`
+-          ? process.getSystemVersion()
+-          : null,
+-      appName: _.app.getName(),
+-      chatGptDesktopAuthOrigin: void 0,
+-      chatGptApiBaseUrl: void 0,
+-      appIconMedium: await efe(e),
+-      dockIconPreviews: $de(e),
+-      preloadAttribution: await g.l(),
+-    };
++    let c = performance.now();
++    Ev().info(`[startup][app-info] get started`, {
++      safe: { webContentsId: this.webContentsId ?? null },
++      sensitive: {},
++    });
++    try {
++      let e = p.t.resolve();
++      Ev().info(`[startup][app-info] metadata computed`, {
++        safe: { webContentsId: this.webContentsId ?? null, totalMs: performance.now() - c },
++        sensitive: {},
++      });
++      let r;
++      try {
++        r = await efe(e);
++        Ev().info(`[startup][app-info] icon resolved`, {
++          safe: { webContentsId: this.webContentsId ?? null, totalMs: performance.now() - c },
++          sensitive: {},
++        });
++      } catch (e) {
++        Ev().info(`[startup][app-info] icon unavailable`, {
++          safe: {
++            webContentsId: this.webContentsId ?? null,
++            totalMs: performance.now() - c,
++            errorName: e?.name ?? `unknown`,
++            errorMessage: (e?.message ?? ``)
++              .replace(/[A-Za-z]:\\[^\s]+|\/[^\s]+/g, `[path]`)
++              .slice(0, 120),
++          },
++          sensitive: {},
++        });
++        r = null;
++      }
++      let a = await g.l();
++      Ev().info(`[startup][app-info] attribution resolved`, {
++        safe: { webContentsId: this.webContentsId ?? null, totalMs: performance.now() - c },
++        sensitive: {},
++      });
++      let t = {
++        version: i.Ti(g.ft()).version,
++        buildNumber: g.et.value,
++        buildFlavor: e,
++        osName: dt(process.platform) ?? null,
++        systemVersion:
++          typeof process.getSystemVersion == `function`
++            ? process.getSystemVersion()
++            : null,
++        appName: _.app.getName(),
++        chatGptDesktopAuthOrigin: void 0,
++        chatGptApiBaseUrl: void 0,
++        appIconMedium: r,
++        dockIconPreviews: $de(e),
++        preloadAttribution: a,
++      };
++      return (
++        Ev().info(`[startup][app-info] get resolved`, {
++          safe: { webContentsId: this.webContentsId ?? null, totalMs: performance.now() - c },
++          sensitive: {},
++        }),
++        t
++      );
++    } catch (e) {
++      Ev().info(`[startup][app-info] get failed`, {
++        safe: {
++          webContentsId: this.webContentsId ?? null,
++          totalMs: performance.now() - c,
++          errorName: e?.name ?? `unknown`,
++        },
++        sensitive: {},
++      });
++      throw e;
++    }
+   }
+ };
+ function $de(e) {
+@@ -158292,13 +158404,14 @@
+           `skysight`,
+           `resources`,
+         ),
+-        x = new i.mi((e, t, n, r) =>
++        x = new i.mi((requestId, t, n, r) =>
+           this.fetchWrapper.fetchHttp(
+-            e,
++            requestId,
+             t,
+             n,
+             r,
+             s.pageCheckpointDownloads.observeResponse(),
++            e.id,
+           ),
+         );
+       e.once(`destroyed`, () => x[Symbol.dispose]());
+@@ -158361,7 +158474,7 @@
+         configSettingsWriteConfirmations:
+           this.settings.configWriteConfirmations,
+         workModeAccess: this.settings,
+-        appInfo: new Qde(),
++        appInfo: new Qde(e.id),
+         accessInputs: this.accessInputs,
+         daybreakPreferences: this.daybreakPreferences,
+         cloudTasks: this.cloudTasks,

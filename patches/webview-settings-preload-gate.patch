@@ -1,0 +1,10 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -537086,7 +537086,7 @@
+ function Dhc(e) {
+   let t = (0, Ohc.c)(3),
+     { children: n } = e;
+-  if (Pt()) {
++  if (!1 && Pt()) {
+     let e;
+     return (

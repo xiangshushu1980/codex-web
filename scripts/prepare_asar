@@ -27,6 +27,8 @@ fi
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-remove-csp.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-style.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-preload.patch
+# Fetch the authenticated primary route while the renderer shell initializes.
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-preload-primary.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-favicon.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-pwa.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-thread-title.patch
@@ -51,3 +53,12 @@ rm -rf scratch/asar/node_modules/better-sqlite3
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-html-sidebar.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-browser-adapter.patch
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-browser-capabilities.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-startup-trace.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-startup-visibility.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-startup-timeout.patch
+# Diagnostic only: normal startup must keep the settings readiness gate.
+if [ "${CODEX_WEB_SETTINGS_PRELOAD_BYPASS:-0}" = "1" ]; then
+  patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-settings-preload-gate.patch
+fi
+patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-startup-http-trace.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-startup-account-rpc-trace.patch

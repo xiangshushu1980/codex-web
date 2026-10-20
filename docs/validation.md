@@ -40,3 +40,11 @@
 - 选择页面 h1 后填写批注，文件路径、选择器、文字和 HTML 加入聊天输入框；测试未发送，验证后清空草稿。
 - `npm run test:files` 扩展为 13 项，增加服务保留、可释放注册、按聊天与标签隔离的导航和历史测试；元素批注及预览切换通过真实浏览器验证。
 - 元素选择仅支持同源页面；原生截图附件和设备模拟未实现且入口关闭，CSV 仍按原流程。
+
+## 首屏启动对照（2026-10-20）
+
+- Task Center：`remote-abacea33-7f47-48b1-b250-2f466a868f19`。口径、完整表格和限制见 [启动性能排查](startup-performance.md)。用户授权服务重启并关闭残余后台标签后，单页样本以真实 browserVisibility、navigationStartMs、renderer ID 关联首屏与完整 app_start span。
+- 4 秒 timeout、保留设置 gate、保留 primary 预加载：3 次 entry→visible 为 16.528 / 13.406 / 12.917 秒；对比 10 秒且同样保留 gate 的 17.592 秒中位数，本轮中位数低约 23.8%。4 秒组全走 Statsig 回退，不能推断远程开关完全等价或长期稳定收益。
+- 默认撤回 SettingsPreloadGate 绕过，仅显式实验开关可启用。前后端构建、JS/shell 语法、可见性补丁 reverse dry-run 通过；基础设置展示、新聊天 composer、模型加载、项目/最近入口及本地账号/会话列表 RPC 检查通过。
+- 云端个人资料/部分端点仍有 Cloudflare 403，未屏蔽请求，未验证真实消息收发。HTML route.fulfill 引起的本地网络访问拒绝已识别并从性能样本剔除；测试 context 授权后重跑去预加载组。
+- 本地证据：`scratch/startup-performance/remote-abacea33-7f47-48b1-b250-2f466a868f19/`。不提交测量产物，不把此次启动检查扩展为 Windows 文件定位的重新验收。
