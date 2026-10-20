@@ -1,0 +1,63 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -192945,11 +192945,12 @@
+     .post(`/wham/onboarding/role/classify`, JSON.stringify({ text: e }), Ig());
+   return bzr.parse(t);
+ }
+-function _zr(e, t) {
++function _zr(e, t, onResponseHeadersReceived) {
+   return $l.safePost(`/wham/statsig/bootstrap`, {
+     requestBody: e,
+     retry: !1,
+     signal: t,
++    onResponseHeadersReceived,
+   });
+ }
+ function PB(e, t) {
+@@ -504887,7 +504888,19 @@
+ }) {
+   let l = new AbortController(),
+     u = null,
+-    d;
++    d,
++    rejectTimeout,
++    headersReceived = !1;
++  const armTimeout = (phase) => {
++    if (l.signal.aborted) return;
++    u != null && globalThis.clearTimeout(u);
++    u = globalThis.setTimeout(() => {
++      let error = Error(`Timed out while fetching post-login Statsig bootstrap (${phase})`);
++      startupTrace(`statsig_bootstrap_race_timed_out_${phase}`);
++      l.abort(error);
++      rejectTimeout(error);
++    }, iZs);
++  };
+   try {
+     startupTrace(`statsig_bootstrap_race_started`);
+     ({ statsigPayload: d } = await Promise.race([
+@@ -504905,16 +504918,16 @@
+           window_type: c,
+         },
+         l.signal,
++        () => {
++          if (headersReceived) return;
++          headersReceived = !0;
++          startupTrace(`statsig_bootstrap_headers_received`);
++          armTimeout(`body`);
++        },
+       ),
+-      new Promise((e, t) => {
+-        u = globalThis.setTimeout(() => {
+-          let e = Error(
+-            `Timed out while fetching post-login Statsig bootstrap`,
+-          );
+-          (startupTrace(`statsig_bootstrap_race_timed_out`),
+-            l.abort(e),
+-            t(e));
+-        }, iZs);
++      new Promise((resolve, reject) => {
++        rejectTimeout = reject;
++        armTimeout(`headers`);
+       }),
+     ]));
+     startupTrace(`statsig_bootstrap_race_resolved`);
