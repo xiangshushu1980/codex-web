@@ -1,5 +1,6 @@
 import { createBrowserAdapter } from "./native-browser";
 import { createStartupProgress } from "./startup-progress";
+import { createStartupCache } from "./startup-cache";
 import { openBrowserLink } from "./browser-links";
 import {
   mapBrowserPathToInitialRoute,
@@ -211,6 +212,7 @@ type StatsigGateEvaluation = {
 };
 
 type ElectronShimState = {
+  startupConfigCache?: ReturnType<typeof createStartupCache>;
   initialRoute?: string;
   initialSidebarState?: boolean;
   closeSidebar?: () => void;
@@ -513,6 +515,7 @@ const themeMediaQuery = matchMedia("(prefers-color-scheme: dark)");
 const mobileMediaQuery = matchMedia("(max-width: 768px)");
 const initialSidebarState = !mobileMediaQuery.matches;
 const electronShim = (window.__ELECTRON_SHIM__ ??= {});
+electronShim.startupConfigCache = createStartupCache();
 const browserAdapter = createBrowserAdapter(dispatchHostMessage);
 Object.assign(electronShim, { browserAdapter });
 const buildFlavor: "prod" | "dev" | "agent" | string = "prod";

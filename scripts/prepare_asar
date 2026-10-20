@@ -60,6 +60,7 @@ patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-sta
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-startup-timeout.patch
 # Give a responding bootstrap a separate bounded budget to finish its large body.
 patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-phase-budget.patch
+patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-startup-cache.patch
 # Diagnostic only: normal startup must keep the settings readiness gate.
 if [ "${CODEX_WEB_SETTINGS_PRELOAD_BYPASS:-0}" = "1" ]; then
   patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-settings-preload-gate.patch

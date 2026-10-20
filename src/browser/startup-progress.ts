@@ -12,6 +12,12 @@ type StartupReport = {
 };
 
 const phases: Record<string, string> = {
+  statsig_cache_hit_fresh: "使用本地功能配置缓存",
+  statsig_cache_hit_stale: "使用配置缓存启动，首屏后检查更新",
+  statsig_cache_miss: "没有有效配置缓存，准备请求官方",
+  statsig_cache_expired: "配置缓存已过期，准备请求官方",
+  statsig_cache_invalid: "配置缓存校验失败，准备请求官方",
+  statsig_cache_identity_unavailable: "当前账户信息不满足配置缓存条件",
   renderer_entry: "初始化应用",
   route_prefetch_start: "加载主界面模块",
   react_root_requested: "准备界面",
@@ -174,6 +180,13 @@ export function createStartupProgress() {
               ...report,
               elapsedMs: Math.round(report.completedAt ?? performance.now()),
               previous: previous?.version === 1 ? previous : undefined,
+              cache: (
+                window as unknown as {
+                  __ELECTRON_SHIM__?: {
+                    startupConfigCache?: { diagnostics: unknown };
+                  };
+                }
+              ).__ELECTRON_SHIM__?.startupConfigCache?.diagnostics,
             },
             null,
             2,

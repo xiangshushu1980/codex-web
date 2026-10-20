@@ -14,6 +14,7 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 | `src/server/module.ts` | Electron 模块别名 |
 | `src/browser/shim.ts` | preload 适配、WebSocket、Electron bridge、浏览器消息分流 |
 | `src/browser/startup-progress.ts` | 首屏阶段、耗时、占位切换与页面重载的本地诊断提示 |
+| `src/browser/startup-cache.ts` | 按已认证身份和应用上下文缓存功能配置；详见 [缓存说明](startup-cache.md) |
 | `src/browser/native-browser.ts` | 原浏览器侧栏的 iframe/browserHost 适配、导航和元素批注草稿 |
 | `src/browser/browser-links.ts` | file:// 到已有 /@fs HTTP 地址的跳转适配 |
 | `src/server/host-files.ts` | 既有 /@fs 文件传输，保留真实 HTML 与媒体 Range |
@@ -32,6 +33,7 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 npm run build:server
 npm run build:browser
 npm run test:files
+npm run test:startup
 ```
 
 `build:server` 在源码旁输出 JS、声明和 source map，Git 忽略它们。浏览器构建更新 `scratch/asar/webview/assets/preload.js`。文件测试覆盖路径规范化、Explorer argv、启动失败和上游 openIn 路由；测试使用 mock 启动器，不弹出 Windows 窗口，fixture 在临时目录，结束清理。

@@ -18,7 +18,7 @@
     "build:browser": "vite build --config vite.browser.config.ts",
     "build:server": "cd src/server && tsc",
     "test:files": "npm run build:server && node --test tests/local-files.test.cjs tests/native-browser.test.cjs",
-    "test:startup": "node --test tests/startup-budget.test.cjs",
+    "test:startup": "node --test tests/startup-budget.test.cjs tests/startup-cache.test.cjs",
     "prepare:asar": "./scripts/prepare_asar",
     "preserver": "npm run build:server && npm run build:browser",
     "server": "CODEX_CLI_PATH=$(which codex) node src/server/main.js"

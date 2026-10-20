@@ -1,0 +1,119 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -504885,7 +504885,9 @@
+   systemName: o,
+   systemVersion: s,
+   windowType: c,
++  startupCacheBackground = false,
+ }) {
++  let cacheMetadata;
+   let l = new AbortController(),
+     u = null,
+     d,
+@@ -504899,7 +504901,7 @@
+       startupTrace(`statsig_bootstrap_race_timed_out_${phase}`);
+       l.abort(error);
+       rejectTimeout(error);
+-    }, iZs);
++    }, phase === `body` && startupCacheBackground ? 15000 : iZs);
+   };
+   try {
+     startupTrace(`statsig_bootstrap_race_started`);
+@@ -504918,7 +504920,12 @@
+           window_type: c,
+         },
+         l.signal,
+-        () => {
++        headers => {
++          cacheMetadata = {
++            etag: headers?.get(`etag`) ?? null,
++            lastModified: headers?.get(`last-modified`) ?? null,
++            cacheControl: headers?.get(`cache-control`) ?? null,
++          };
+           if (headersReceived) return;
+           headersReceived = !0;
+           startupTrace(`statsig_bootstrap_headers_received`);
+@@ -504944,7 +504951,7 @@
+     let { user: e } = eZs.parse(JSON.parse(d));
+     return (
+       startupTrace(`statsig_bootstrap_payload_parsed`),
+-      { statsigPayload: d, user: e }
++      { statsigPayload: d, user: e, cacheMetadata }
+     );
+   } catch (e) {
+     throw new f8(
+@@ -505752,6 +505759,7 @@
+   );
+ }
+ function hQs(e) {
++  window.__ELECTRON_SHIM__?.startupConfigCache?.observeAuth(e.auth);
+   let t = (0, p8.c)(33),
+     {
+       auth: n,
+@@ -506317,7 +506325,7 @@
+     });
+ }
+ function xQs(e) {
+-  let t = (0, p8.c)(45),
++  let t = (0, p8.c)(46),
+     {
+       appSessionId: n,
+       appVersion: r,
+@@ -506335,10 +506343,47 @@
+     m = G(Zzs).enabled,
+     h = (0, m8.useRef)(0),
+     g;
+-  t[0] !== p || t[1] !== l
++  t[0] !== p || t[1] !== l || t[45] !== i
+     ? ((g = async (e) => {
+         startupTrace(`post_login_statsig_bootstrap_started`);
+-        let t = await SQs(e, h);
++        const cache = window.__ELECTRON_SHIM__?.startupConfigCache;
++        const readIdentity = async () => {
++          try {
++            if (!Pd.accessInputs) return i;
++            const info = await uh(Pd.accessInputs.readAccountInfo(true));
++            return info.status === `ready` && info.data.hasChatGptToken
++              ? { ...i, ...info.data, authMethod: i.authMethod } : {};
++          } catch { return {}; }
++        };
++        const principal = await readIdentity();
++        const scope = {
++          userId: principal.userId, accountId: principal.accountId, authMethod: principal.authMethod,
++          authenticatedUserId: principal.authenticatedUserId,
++          computeResidency: principal.computeResidency, dataResidency: i.dataResidency,
++          planAtLogin: principal.plan ?? i.planAtLogin,
++          sdkKey: l, appVersion: e.appVersion, buildFlavor: e.buildFlavor,
++          beta: e.beta, locale: e.locale, stableId: e.stableId,
++          systemName: e.systemName, systemVersion: e.systemVersion,
++          windowType: e.windowType,
++        };
++        const validate = value => {
++          const parsed = eZs.parse(JSON.parse(value.statsigPayload));
++          if (parsed.has_updates !== true || !Number.isFinite(parsed.time)) throw Error(`Invalid cached bootstrap`);
++          return { ...value, user: parsed.user, cacheMetadata: { ...value.cacheMetadata, time: parsed.time, fullChecksum: parsed.full_checksum ?? null } };
++        };
++        const fetchBootstrap = async background => {
++          if (background) {
++            const current = await readIdentity();
++            if (current.userId !== scope.userId || current.accountId !== scope.accountId) {
++              cache?.setIdentity(current);
++              throw Error(`Account changed before background refresh`);
++            }
++          }
++          return SQs({ ...e, startupCacheBackground: background }, h);
++        };
++        let t = cache
++          ? await cache.load(scope, fetchBootstrap, validate, startupTrace)
++          : await SQs(e, h);
+         startupTrace(`post_login_statsig_bootstrap_resolved`);
+         try {
+           let e = new AQs.StatsigClient(l, t.user, DQs(p));
+@@ -506358,6 +506403,7 @@
+         }
+       }),
+       (t[0] = p),
++      (t[45] = i),
+       (t[1] = l),
+       (t[2] = g))
+     : (g = t[2]);
