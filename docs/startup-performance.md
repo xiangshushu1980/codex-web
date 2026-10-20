@@ -90,6 +90,25 @@ Settings gate 绕过没有显示稳定收益：在 4 秒条件下，两组中位
 
 恢复测量时优先使用证据目录中的 `measure.js`，顶部 `config` 明确指定 timeout/gate/preload，并对两种 gate 状态做严格锚点替换。旧 `run-*.js` 为当时实验脚本，部分依赖恢复 gate 之前的输入状态。CPU profile、有效/无效样本及服务快照均保留本地，原有混合改动未整体提交。
 
+## 服务已就绪时的页面加载优化（2026-10-20 补测）
+
+本轮直接访问 `http://codex.localhost/`，保持服务运行，不将服务启动耗时计入页面加载。首次导航 HTML 响应约 5.5 ms，DOMContentLoaded 约 288 ms；必需的 `app-initial-6350d04672d0.js`（约 18.3 MB）却到约 859 ms 才开始请求，renderer entry 约 2.97 秒，metadata gate 约 4.26 秒解除。远程 Statsig bootstrap 约 1.92 秒收到响应头，但未在 4 秒预算内完成，回退 async gate 到导航约 40.92 秒才解除。响应头到达不等于正文读取与初始化完成；本轮尚未将超时归因到网络、正文传输或 RPC 桥的某一个环节。
+
+新增 `webview-preload-initial.patch` 并接入 `prepare_asar`：在 HTML 中 modulepreload 必需的 initial bundle，使其与 shared runtime 并行下载/编译，不提前执行应用、不改变设置和认证门控或功能配置回退。当前服务可直接读取更新后的 HTML，无需重启。
+
+在固定的同一浏览器进程中，每次新建 context（不复用页面缓存/存储），关闭后再开始下个样本，按关闭/开启预加载交错测量各 3 次。两组均用相同 HTML 路由响应和 local-network-access 测试权限；静态资源与 WebSocket 仍访问真实服务。该实验仅比较 metadata gate 之前的本地阶段，不测完整首屏，也不代表 Windows 浏览器实测。
+
+| 指标（导航开始起，毫秒） | 无 initial preload | 有 initial preload |
+| --- | --- | --- |
+| initial 请求开始 | 808 / 832 / 820 | 6 / 6 / 6 |
+| initial 下载结束 | 1003 / 1023 / 1012 | 272 / 265 / 269 |
+| renderer entry | 2903 / 2952 / 2897 | 2656 / 2637 / 2669 |
+| metadata gate 解除 | 3754 / 3808 / 3742 | 3511 / 3494 / 3532 |
+
+本地阶段中位数减少约 243 ms（6.5%），收益有限；仍有约 2.65 秒的首次脚本解析/执行，远程配置等待仍是更大的波动来源。不能据此声称完整首屏从 10 秒降到某个固定值。复用缓存的探索样本 gate 约 0.71 秒，也不能与新 context 样本混算。测量脚本与原始结果保留在 `scratch/page-load-performance/`，不提交运行产物。
+
+更新 HTML 后的独立完整导航验证：metadata gate 约 0.997 秒解除，Statsig bootstrap 于 1.001 秒开始、5.002 秒超时，async init 于 12.687 秒完成，路由约 17.239 秒挂载，first-content 边界约 17.434 秒，输入框存在。页面仍显示正在加载个人资料；未发送消息、未修改设置。该样本没有完整首屏的成对基线，不能据此量化首屏收益。前后端构建、prepare shell 语法、补丁反向 dry-run 和 diff whitespace 检查通过。本轮遇到远程超时后已请求用户确认只读网络测试；未改代理配置，也未进一步缩短 timeout。
+
 ## 本机运行注意
 
 `codex-web.service` 进程树包含 Codex app-server，会承载由该服务启动的会话。后续重启虽已获用户明确授权，仍应先确保当前改动和可恢复上下文落盘；监控 `NRestarts`、heap OOM 和服务内存，避免把服务重启和 renderer 重载混为同一现象。本轮执行会话已核实位于独立进程组，可在服务重启后继续；其他会话需要分别核对。项目运行与重启细节见 [开发手册](development.md)。

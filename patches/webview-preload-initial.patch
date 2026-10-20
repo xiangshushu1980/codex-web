@@ -1,0 +1,14 @@
+--- a/webview/index.html
++++ b/webview/index.html
+@@ -166,6 +166,11 @@
+       href="./assets/app-primary-6f60e9ac4103.js"
+     />
+     <link
++      rel="modulepreload"
++      crossorigin
++      href="./assets/app-initial-6350d04672d0.js"
++    />
++    <link
+       rel="stylesheet"
+       crossorigin
+       href="./assets/app-shared-9a94b907ed47.css"
