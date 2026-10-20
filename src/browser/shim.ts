@@ -1,4 +1,5 @@
 import { createBrowserAdapter } from "./native-browser";
+import { createStartupProgress } from "./startup-progress";
 import { openBrowserLink } from "./browser-links";
 import {
   mapBrowserPathToInitialRoute,
@@ -55,6 +56,7 @@ function installClipboardFallback(): void {
 }
 
 installClipboardFallback();
+const startupProgress = createStartupProgress();
 
 let developmentNoticeTimeout: number | undefined;
 
@@ -352,9 +354,11 @@ function ensureSocket(): void {
     // App-host RPC transfers MessagePorts once at startup. A new connection needs
     // a fresh app view; replaying requests against the closed ports cannot recover it.
     if (needsReload) {
+      startupProgress.connection("reload");
       window.location.reload();
       return;
     }
+    startupProgress.connection("open");
     flushOutboundQueue();
   });
   socket.addEventListener("message", (event) => {
@@ -369,6 +373,7 @@ function ensureSocket(): void {
     }
   });
   socket.addEventListener("close", () => {
+    startupProgress.connection("close");
     needsReload = true;
     const error = new Error("Connection to Codex was lost");
     for (const pending of pendingInvokes.values()) pending.reject(error);
@@ -513,6 +518,7 @@ Object.assign(electronShim, { browserAdapter });
 const buildFlavor: "prod" | "dev" | "agent" | string = "prod";
 
 function handleMessageFromView(message: unknown): Promise<unknown> {
+  startupProgress.log(message);
   if (isRecord(message) && browserAdapter.handle(message)) return Promise.resolve();
   if (isOpenInBrowserMessage(message)) {
     openBrowserLink(message.url);

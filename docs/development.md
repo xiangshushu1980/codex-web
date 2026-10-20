@@ -13,6 +13,7 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 | `src/server/electron/shell.ts` | WSL/Windows 路径转换与 Explorer 文件定位 |
 | `src/server/module.ts` | Electron 模块别名 |
 | `src/browser/shim.ts` | preload 适配、WebSocket、Electron bridge、浏览器消息分流 |
+| `src/browser/startup-progress.ts` | 首屏阶段、耗时、占位切换与页面重载的本地诊断提示 |
 | `src/browser/native-browser.ts` | 原浏览器侧栏的 iframe/browserHost 适配、导航和元素批注草稿 |
 | `src/browser/browser-links.ts` | file:// 到已有 /@fs HTTP 地址的跳转适配 |
 | `src/server/host-files.ts` | 既有 /@fs 文件传输，保留真实 HTML 与媒体 Range |
