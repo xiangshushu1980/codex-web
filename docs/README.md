@@ -11,6 +11,7 @@
 | 首屏功能配置缓存、有效期、身份隔离与更新标记 | [配置缓存](startup-cache.md) |
 | Explorer 文件定位、路径规则和故障处理 | [WSL 文件访问](file-access.md) |
 | 为何恢复内置预览并使用 Windows Explorer | [文件访问决策](decisions/browser-file-access.md) |
+| 临时停用被上游挑战拦截的功能及恢复步骤 | [接口降级决策](decisions/upstream-api-degraded-surfaces.md) |
 | 本地分支来源与提交边界 | [HIVEMIND](../HIVEMIND.md) |
 | 上游应用升级与补丁维护 | [UPGRADING](../UPGRADING.md) |
 

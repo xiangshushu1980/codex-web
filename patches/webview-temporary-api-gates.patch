@@ -1,0 +1,363 @@
+--- a/webview/assets/app-shared-8bd9d0399038.js
++++ b/webview/assets/app-shared-8bd9d0399038.js
+@@ -287195,7 +287195,7 @@
+           { accountId: e, teamId: t, activeFirst: n },
+           { get: r, scope: i },
+         ) => ({
+-          enabled: r(z8, e),
++          enabled: !1,
+           initialPageParam: n ? { cursor: null, filter: `scheduled` } : null,
+           getNextPageParam: (e) => e?.nextStatusPage ?? e?.cursor ?? void 0,
+           queryFn: async ({ pageParam: r, signal: a }) => {
+@@ -287455,23 +287455,7 @@
+   });
+ }
+ async function S_i(e, t) {
+-  let n = [],
+-    r = null;
+-  try {
+-    do {
+-      let i = await FW.safeGet(`/automations`, {
+-        parameters: {
+-          query: { cursor: r, ...(e == null ? {} : { filter: e }), limit: 100 },
+-        },
+-        signal: t,
+-      });
+-      (n.push(...i.items), (r = i.cursor ?? null));
+-    } while (r != null);
+-  } catch (e) {
+-    if (C_i(e)) return null;
+-    throw e;
+-  }
+-  return n;
++  return null;
+ }
+ function C_i(e) {
+   return e instanceof OW && e.status === 404;
+@@ -287627,7 +287611,7 @@
+           r = n != null && e(B8, n) ? e(V8, n) : void 0,
+           i = n != null && r != null && r.error == null ? u_i(r.data) : [];
+         return {
+-          enabled: n != null,
++          enabled: !1,
+           queryFn: async ({ signal: e }) => {
+             let a = i;
+             if (n != null && r != null)
+@@ -287653,7 +287637,7 @@
+         let r = t(q8),
+           i = t(Y8, r);
+         return {
+-          enabled: r != null,
++          enabled: !1,
+           initialPageParam: null,
+           queryKey: [`cloud-automations`, `scheduled-page`, r, e],
+           queryFn: async ({ pageParam: t, signal: i }) => {
+@@ -288758,7 +288742,8 @@
+   hbi,
+   gbi,
+   _bi,
+-  vbi;
++  vbi,
++  zbi;
+ function ybi() {
+   return (ybi = t(() => {
+     (gA(),
+@@ -288817,6 +288802,11 @@
+         isError: !1,
+         isCapable: e6?.demoTools != null,
+       }))),
++      (zbi = J(X, () => ({
++        isLoading: !1,
++        isError: !1,
++        isCapable: !1,
++      }))),
+       (sbi = J(X, ({ get: e }) => {
+         let t = e(e(cjn) === `STEPS_PROSE` ? hq : pq),
+           n = e(YAn),
+@@ -288985,16 +288975,16 @@
+         "chat-seat-access": ibi,
+         "chatgpt-conversations": abi,
+         "clinical-starter-prompts": cvi,
+-        "cloud-automations": hbi,
++        "cloud-automations": zbi,
+         "demo-tools": obi,
+-        dictation: cbi,
+-        "chatgpt-dictation": ubi,
+-        "global-dictation": lbi,
++        dictation: zbi,
++        "chatgpt-dictation": zbi,
++        "global-dictation": zbi,
+         legal: pbi,
+-        "local-automations": mbi,
++        "local-automations": zbi,
+         orbit: XY,
+-        "scheduled-tasks": K_i,
+-        "workspace-dictation": dbi,
++        "scheduled-tasks": zbi,
++        "workspace-dictation": zbi,
+         "workspace-in-app-browser": fbi,
+       }));
+   }))();
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -76345,11 +76345,7 @@
+             return null;
+           throw e;
+         }),
+-      $l.safeGet(`/ps/connectors/by-template`, {
+-        surface: `other`,
+-        parameters: { query: { template_id: r } },
+-        additionalHeaders: _Bt,
+-      }),
++      Promise.resolve({ connectors: [] }),
+     ]);
+   return [...(i == null ? [] : [i]), ...a]
+     .filter((e) => e.id === n || e.template_id === r)
+@@ -128750,7 +128746,7 @@
+   let n = OGt({ accountId: e, userId: t, productSku: `CODEX` });
+   return zh({
+     queryKey: [...noe, `gitlab-instances`, e, t],
+-    enabled: !!e && !!t,
++    enabled: !1,
+     staleTime: Qg.FIVE_MINUTES,
+     refetchOnMount: `always`,
+     retry: !1,
+@@ -269214,7 +269210,7 @@
+   t[5] !== s || t[6] !== a
+     ? ((f = () => fZi(a, s)), (t[5] = s), (t[6] = a), (t[7] = f))
+     : (f = t[7]);
+-  let p = n && c === `chatgpt` && l != null && s != null,
++  let p = !1,
+     m;
+   t[8] === a ? (m = t[9]) : ((m = (e) => vZi(e, a)), (t[8] = a), (t[9] = m));
+   let h;
+@@ -269246,7 +269242,7 @@
+     s = a?.id ?? null,
+     c;
+   t[0] === s ? (c = t[1]) : ((c = [...CZi, s]), (t[0] = s), (t[1] = c));
+-  let l = n && !o && a != null,
++  let l = !1,
+     u;
+   t[2] === a
+     ? (u = t[3])
+@@ -273500,7 +273496,7 @@
+   ];
+ }
+ function L0i({ accountId: e, context: t, locale: n, userId: r }, i) {
+-  let a = t != null && r != null && e != null;
++  let a = !1;
+   return {
+     enabled: a,
+     queryFn: a
+@@ -279982,7 +279978,10 @@
+ var n5i, r5i;
+ function i5i() {
+   return (i5i = e(() => {
+-    (tl(), zDe(), (n5i = X({ success: xo() })), (r5i = e5i()));
++    (tl(),
++      zDe(),
++      (n5i = X({ success: xo() })),
++      (r5i = e5i({ isEnabled: () => !1 })));
+   }))();
+ }
+ function a5i() {
+@@ -324917,7 +324916,7 @@
+ function pWa() {
+   return (pWa = e(() => {
+     fWa =
+-      `general-settings.notifications.import.profile.security.account.age.agreements.parental-controls.trusted-contact.safety.time-management.keyboard-shortcuts.codex-micro.appshots.appearance.voice.storage.pets.chronicle.agent.work-settings.git-settings.data-controls.archived-chats.ads-controls.cloud-settings.cloud-environments.codex-cloud.code-review.personalization.usage.billing.analytics.consumer-view.usage-code-review.debug.browser-use.extension.computer-use.local-environments.worktrees.environments.mcp-settings.hooks-settings.connections.plugins-settings.file-type-handlers.skills-settings.teams.cloud-computer.passwords`.split(
++      `general-settings.notifications.import.profile.security.account.age.agreements.parental-controls.trusted-contact.safety.time-management.keyboard-shortcuts.codex-micro.appshots.appearance.voice.storage.chronicle.agent.work-settings.git-settings.data-controls.archived-chats.ads-controls.cloud-settings.cloud-environments.codex-cloud.code-review.personalization.usage.analytics.consumer-view.usage-code-review.debug.browser-use.extension.computer-use.local-environments.worktrees.environments.mcp-settings.hooks-settings.connections.file-type-handlers.skills-settings.teams.cloud-computer.passwords`.split(
+         `.`,
+       );
+   }))();
+@@ -354395,13 +354394,8 @@
+ function huo(e, t) {
+   return {
+     queryKey: [...luo(e, t), `catalog`],
+-    queryFn:
+-      e == null
+-        ? o_
+-        : async ({ signal: t }) => ({
+-            pets: await muo(e, t),
+-            receivedAt: Date.now(),
+-          }),
++    enabled: !1,
++    queryFn: async () => ({ pets: [], receivedAt: Date.now() }),
+     refetchInterval: Qg.FIVE_MINUTES,
+     refetchOnWindowFocus: !0,
+     retry: 1,
+@@ -500656,13 +500650,13 @@
+   let t = (0, UGs.c)(54),
+     { appVersion: n, client: r, deviceId: i, enabled: a } = e,
+     { data: o, status: s } = Tc(),
+-    c = a && s === `success` && o === !0,
++    c = !1,
+     l;
+   t[0] !== c || t[1] !== o || t[2] !== s || t[3] !== a
+     ? ((l = `pending`),
+       c
+         ? (l = `allowed`)
+-        : (!a || o === !1 || s === `error`) && (l = `disabled`),
++        : (!c || !a || o === !1 || s === `error`) && (l = `disabled`),
+       (t[0] = c),
+       (t[1] = o),
+       (t[2] = s),
+--- a/webview/assets/app-primary-6f60e9ac4103.js
++++ b/webview/assets/app-primary-6f60e9ac4103.js
+@@ -6179,91 +6179,14 @@
+           refetchOnWindowFocus: !1,
+           retry: !1,
+           staleTime: 6e4,
+-          queryFn: async ({ signal: u }) => {
+-            let d = window.electronBridge?.getDesktopUserAgent?.() ?? null,
+-              f = d == null ? void 0 : l.get(Zhe),
+-              p = d == null ? void 0 : l.get(GA),
+-              m = o === `chatgpt` && t == null && (d != null || !1),
+-              h = Du(),
+-              g = d != null && o === `codex` && t == null ? n : void 0,
+-              _ = nRe(l, o, a, c),
+-              v = _ ? [BOe] : void 0,
+-              y = t ?? v,
+-              b = t ?? (o === `chatgpt` ? void 0 : v),
+-              x =
+-                d != null && o === `codex` && t == null && e != null
+-                  ? ((await l.query.fetch(HA).catch(() => null)) ?? void 0)
+-                  : void 0,
+-              S = await k.safeGet(`/beacons/home`, {
+-                additionalHeaders: {
+-                  "Cache-Control": `no-store`,
+-                  ...(d == null ? {} : { "User-Agent": d }),
+-                },
+-                parameters: {
+-                  query: {
+-                    product: o,
+-                    selected_model_slug:
+-                      r == null ? void 0 : l.get(Vx, r).selectedModel.slug,
+-                    web_frontend: `codex_webview`,
+-                    codex_window_type: `electron`,
+-                    desktop_voice_available: p,
+-                    desktop_voice_nux_seen: f,
+-                    notification_state: x,
+-                    home_sms_backup_supported: !1,
+-                    pepper_home_banner_supported: m,
+-                    space_tooltip_ready: _,
+-                    supported_home_tooltip_targets: b == null ? void 0 : [...b],
+-                    codex_fast_mode_eligible: g?.codex_fast_mode_eligible,
+-                    codex_fast_mode_saved_ms: g?.codex_fast_mode_saved_ms,
+-                    codex_fast_mode_thread_count:
+-                      g?.codex_fast_mode_thread_count,
+-                    browser_family: h ?? void 0,
+-                    browser_extension_installed:
+-                      h == null ? void 0 : l.get(eMe),
+-                    browser_tab_search_available:
+-                      h == null ? void 0 : VBe(l, o),
+-                  },
+-                },
+-              }),
+-              C = [];
+-            o === `chatgpt` && t == null && d != null && (C = IBe);
+-            let { beacon: w, rejection: T } = GBe(S, C),
+-              E = w == null ? null : await NBe(l, w);
+-            if (
+-              (E != null && WA(E) && d == null && (E = null),
+-              E?.beacon_id === `codex_fast_mode_home_banner` &&
+-                (g?.codex_fast_mode_eligible !== !0 ||
+-                  E.ui_info.type !== `beacon_banner_info`) &&
+-                (E = null),
+-              t != null &&
+-                w?.ui_info.type !== `beacon_tooltip_info` &&
+-                (E = null),
+-              w?.ui_info.type === `beacon_tooltip_info`)
+-            ) {
+-              let e = w.ui_info.target;
+-              y?.some((t) => t === e) || (E = null);
+-            }
+-            T != null &&
+-              hye(l, {
+-                beaconId: T.beaconId,
+-                diagnostic: T.diagnostic,
+-                placement: KBe[o],
+-                suppressLifecycle: T.suppressLifecycle,
+-                treatment: T.treatment,
+-              });
+-            let D = !u.aborted && E != null && (nO(E) || jEe(E)) && s();
+-            return (
+-              D && e != null && E != null && vD(E) && Ege(l, e, E),
+-              {
+-                accountId: e,
+-                beacon: D ? null : E,
+-                locale: i,
+-                pathname: a,
+-                product: o,
+-                visitKey: c,
+-              }
+-            );
+-          },
++          queryFn: async () => ({
++            accountId: e,
++            beacon: null,
++            locale: i,
++            pathname: a,
++            product: o,
++            visitKey: c,
++          }),
+         }),
+         { excludeFieldsFromKey: [`shouldSuppressFocusedModal`] },
+       )));
+@@ -8288,7 +8211,6 @@
+       { id: `composer-tip`, areas: [`chat`, `work`] },
+       { id: `subscription-onboarding`, areas: [`home`, `chat`, `work`] },
+       { id: `home-beacon`, areas: [`home`, `chat`, `work`] },
+-      { id: `gift-credits`, areas: [`home`, `chat`, `work`] },
+       { id: `external-agent-import`, areas: [`home`, `chat`, `work`] },
+       { id: `worktree-onboarding`, areas: [`home`, `chat`, `work`] },
+       { id: `computer-history`, areas: [`home`, `chat`, `work`] },
+--- a/webview/assets/page-400328cd46f4.js
++++ b/webview/assets/page-400328cd46f4.js
+@@ -2229,16 +2229,7 @@
+       (t[37] = L),
+       (t[38] = R))
+     : (R = t[38]);
+-  let z;
+-  t[39] !== F || t[40] !== R
+-    ? ((z = (0, Y.jsx)(W, {
+-        label: P,
+-        control: (0, Y.jsxs)(Y.Fragment, { children: [F, R] }),
+-      })),
+-      (t[39] = F),
+-      (t[40] = R),
+-      (t[41] = z))
+-    : (z = t[41]);
++  let z = null;
+   let B;
+   t[42] === Symbol.for(`react.memo_cache_sentinel`)
+     ? ((B = (0, Y.jsx)(ds, {})), (t[42] = B))
+@@ -8870,16 +8861,7 @@
+       (t[61] = _e),
+       (t[62] = ye))
+     : (ye = t[62]);
+-  let G;
+-  t[63] !== ge || t[64] !== ye
+-    ? ((G = (0, yu.jsx)(W, {
+-        label: he,
+-        control: (0, yu.jsxs)(yu.Fragment, { children: [ge, ye] }),
+-      })),
+-      (t[63] = ge),
+-      (t[64] = ye),
+-      (t[65] = G))
+-    : (G = t[65]);
++  let G = null;
+   let be;
+   t[66] !== i ||
+  t[67] !== d ||
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -614398,6 +614398,1 @@
+-      typeof window < `u` &&
+-        window.setTimeout(() => {
+-          try {
+-            Qpl();
+-          } catch {}
+-        }, 0));
++      false;
+ }

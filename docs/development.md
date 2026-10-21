@@ -61,6 +61,12 @@ systemctl --user restart codex-web.service
 
 随后在 Windows 浏览器刷新。长任务不中断的独立 app-server 方案见根 README 中的 proxying 章节；当前本机尚未验证该部署切换。
 
+## 暂时停用被拦截的上游功能
+
+当前有一组上游接口持续返回 `403 cloudflare_challenge`。本地临时关闭了依赖这些接口的入口与后台查询，恢复范围、证据和逐步还原方法见[决策记录](decisions/upstream-api-degraded-surfaces.md)。补丁通过 `scripts/prepare_asar` 应用；不要只在 `scratch/asar` 手改，否则重新准备应用时会丢失。
+
+这些是浏览器侧上游资源变更，准备新资源后刷新 Windows 浏览器即可；本次不需要重启服务。服务还托管 Codex app-server，重启会中断活动会话，只有在补丁涉及后端或当前运行方式要求时才按上文流程切换。
+
 ## 提交边界
 
 只提交源码、补丁、测试和文档。`scratch/`、编译产物、模型、会话状态、上传文件和 node_modules 留在本地。仓库可能有其他未提交改动，提交前检查并按文件或补丁块选择范围。`.codegraph/` 存在时优先用 codegraph 理解代码；新增接口字符串和解包生成文件可直接定位。
