@@ -299,6 +299,9 @@ export function createBrowserAdapter(emit: (message: RecordValue) => void) {
       async setAnnotationPresentation(p: RecordValue) {
         if (p.suspended != null) page(p).suspended = p.suspended;
       },
+      subscribePermissionPrompts() {
+        return { [Symbol.dispose]() {} };
+      },
       registerAnnotationButton() {
         return { async updateBounds() {}, [Symbol.dispose]() {} };
       },
