@@ -425,6 +425,20 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
     path.join(os.tmpdir(), "codex-web-uploads-"),
   );
 
+  app.get("/__backend/hive-resource/occupancy", async (_request, reply) => {
+    const port = Number(process.env.HIVE_RESOURCE_PORT || 3190);
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/resources/occupancy`,
+      );
+      const body = await response.json();
+      return reply.code(response.status).send(body);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return reply.code(503).send({ error: `Hive Resource 不可用：${message}` });
+    }
+  });
+
   app.post("/__backend/upload", async (request, reply) => {
     if (!request.isMultipart()) {
       return reply.code(400).send({ error: "expected multipart upload body" });

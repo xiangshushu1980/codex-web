@@ -14,6 +14,7 @@ import {
   openSelectWorkspaceRootDialog,
   type WorkspaceDirectoryEntries,
 } from "./workspace-root-dialog";
+import { mountResourceLeasePanel } from "./resource-lease-panel";
 
 function installClipboardFallback(): void {
   const clipboard = navigator.clipboard;
@@ -57,6 +58,8 @@ function installClipboardFallback(): void {
 }
 
 installClipboardFallback();
+if (document.body) mountResourceLeasePanel();
+else document.addEventListener("DOMContentLoaded", mountResourceLeasePanel, { once: true });
 const startupProgress = createStartupProgress();
 
 let developmentNoticeTimeout: number | undefined;

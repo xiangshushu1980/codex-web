@@ -13,6 +13,7 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 | `src/server/electron/shell.ts` | WSL/Windows 路径转换与 Explorer 文件定位 |
 | `src/server/module.ts` | Electron 模块别名 |
 | `src/browser/shim.ts` | preload 适配、WebSocket、Electron bridge、浏览器消息分流 |
+| `src/browser/resource-lease-panel.ts` | 当前对话的 Hive Resource 租约状态和提示快捷操作 |
 | `src/browser/startup-progress.ts` | 首屏阶段、耗时、占位切换与页面重载的本地诊断提示 |
 | `src/browser/startup-cache.ts` | 按已认证身份和应用上下文缓存功能配置；详见 [缓存说明](startup-cache.md) |
 | `src/browser/native-browser.ts` | 原浏览器侧栏的 iframe/browserHost 适配、导航和元素批注草稿 |
@@ -24,6 +25,14 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 | `vite.browser.config.ts` | 浏览器 preload 构建及开发代理 |
 
 应用服务 RPC 经 MessagePort 在 WebSocket 上传输。普通旧消息仍经 Electron IPC。普通 HTML 点击和 Ctrl+P 通过 `webview-html-sidebar.patch` 复用原浏览器侧栏组件和工具栏，以 iframe 渲染原始网页，并保留简易预览切换；其他文件预览使用上游流程；openIn 服务的本地默认/文件管理器打开经 `app-host-windows-files.patch` 交给 Electron shell bridge，启动 Windows Explorer 并选中文件。没有自建文件解析器、独立预览弹窗或文件目录 API。
+
+## Hive Resource 租约面板
+
+浏览器 preload 会显示租约面板，并每 8 秒通过 `GET /__backend/hive-resource/occupancy` 读取 Hivemind 本机 Hive Resource daemon 的活动租约。Fastify 路由只代理读取 `127.0.0.1:<HIVE_RESOURCE_PORT>/api/resources/occupancy`（默认端口 3190），不执行租约获取、续期、释放或接管。
+
+面板从 `/thread/<id>` 路由提取当前对话 ID，并通过租约 `metadata.conversationId`、`metadata.threadId` 或 `owner` 与该 ID 匹配。新租约的提示模板要求 Agent 在 owner 和 metadata 中写入会话 ID；既有租约若没有这些信息，会展示为“其他/未确认对话”，不会推断其归属。活动租约展示资源、是否为 `gpu:exclusive`、持有者、租约 ID、获取/到期和心跳时间。
+
+“申请租约”“暂时保留”“检查并释放”“请求接管”按钮只把对应提示文本加入当前对话输入框，需用户检查并手动发送。租约生命周期操作仍由 Agent 执行。该面板只显示租约状态，不证明 GPU 实际调用是否运行；请求接管的提示要求先与持有租约的对话协调，无法确认时不强制释放。
 
 ## 构建和检查
 
