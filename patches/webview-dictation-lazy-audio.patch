@@ -1,0 +1,17 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -614395,13 +614395,7 @@
+       Ypl(),
+       (eml = { start: Kpl, stop: Jpl, error: Wpl }),
+       (P9 = null),
+-      (tml = null),
+-      typeof window < `u` &&
+-        window.setTimeout(() => {
+-          try {
+-            Qpl();
+-          } catch {}
+-        }, 0));
++      (tml = null));
+   }))();
+ }
+ var iml;
