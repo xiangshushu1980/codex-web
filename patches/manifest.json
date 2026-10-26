@@ -1,0 +1,257 @@
+{
+  "upstreamVersions": [
+    "26.1007.30912"
+  ],
+  "patches": [
+    {
+      "file": "webview-remove-csp.patch",
+      "after": [],
+      "optional": false
+    },
+    {
+      "file": "webview-style.patch",
+      "after": [
+        "webview-remove-csp.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-preload.patch",
+      "after": [
+        "webview-style.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-preload-primary.patch",
+      "after": [
+        "webview-preload.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-preload-initial.patch",
+      "after": [
+        "webview-preload-primary.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-favicon.patch",
+      "after": [
+        "webview-preload-initial.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-pwa.patch",
+      "after": [
+        "webview-favicon.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-thread-title.patch",
+      "after": [
+        "webview-pwa.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-initial-route.patch",
+      "after": [
+        "webview-thread-title.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-electron-shim-close-sidebar.patch",
+      "after": [
+        "webview-initial-route.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-prosemirror-inputmode.patch",
+      "after": [
+        "webview-electron-shim-close-sidebar.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-use-atfs-for-local-files.patch",
+      "after": [
+        "webview-prosemirror-inputmode.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-statsig-override-adapter.patch",
+      "after": [
+        "webview-use-atfs-for-local-files.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-statsig-bootstrap-retry.patch",
+      "after": [
+        "webview-statsig-override-adapter.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-prompt-search-param.patch",
+      "after": [
+        "webview-statsig-bootstrap-retry.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "sentry-disable-shell.patch",
+      "after": [
+        "webview-prompt-search-param.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "sentry-disable-webview.patch",
+      "after": [
+        "sentry-disable-shell.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "preload-disable-device-check.patch",
+      "after": [
+        "sentry-disable-webview.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-safe-header-left.patch",
+      "after": [
+        "preload-disable-device-check.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "app-host-json-rpc.patch",
+      "after": [
+        "webview-safe-header-left.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "app-host-browser-windows.patch",
+      "after": [
+        "app-host-json-rpc.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-archive-empty-thread.patch",
+      "after": [
+        "app-host-browser-windows.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "app-host-windows-files.patch",
+      "after": [
+        "webview-archive-empty-thread.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-html-sidebar.patch",
+      "after": [
+        "app-host-windows-files.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-browser-adapter.patch",
+      "after": [
+        "webview-html-sidebar.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-browser-capabilities.patch",
+      "after": [
+        "webview-browser-adapter.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-startup-trace.patch",
+      "after": [
+        "webview-browser-capabilities.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-startup-visibility.patch",
+      "after": [
+        "webview-startup-trace.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-statsig-startup-timeout.patch",
+      "after": [
+        "webview-startup-visibility.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-statsig-phase-budget.patch",
+      "after": [
+        "webview-statsig-startup-timeout.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-startup-cache.patch",
+      "after": [
+        "webview-statsig-phase-budget.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-settings-preload-gate.patch",
+      "after": [
+        "webview-startup-cache.patch"
+      ],
+      "optional": true
+    },
+    {
+      "file": "app-host-startup-http-trace.patch",
+      "after": [
+        "webview-settings-preload-gate.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "app-host-startup-account-rpc-trace.patch",
+      "after": [
+        "app-host-startup-http-trace.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-temporary-api-gates.patch",
+      "after": [
+        "app-host-startup-account-rpc-trace.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-dictation-lazy-audio.patch",
+      "after": [
+        "webview-temporary-api-gates.patch"
+      ],
+      "optional": false
+    }
+  ]
+}

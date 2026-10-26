@@ -10,8 +10,8 @@
   ],
   "bin": "src/server/main.js",
   "scripts": {
-    "prepare": "./scripts/prepare && npm run build:browser && npm run build:server",
-    "build": "npm run prepare:asar && npm run build:browser && npm run build:server",
+    "prepare": "./scripts/prepare",
+    "build": "./scripts/releases prepare",
     "launch:unpacked:server": "http-server ./scratch/asar/webview -a localhost -p 5175 -c-1",
     "launch:unpacked": "NODE_ENV=development electron ./scratch/asar --remote-debugging-port=9222",
     "dev:browser": "vite --config vite.browser.config.ts",
@@ -19,9 +19,10 @@
     "build:server": "cd src/server && tsc",
     "test:files": "npm run build:server && node --test tests/local-files.test.cjs tests/native-browser.test.cjs",
     "test:startup": "node --test tests/startup-budget.test.cjs tests/startup-cache.test.cjs",
-    "prepare:asar": "./scripts/prepare_asar",
+    "prepare:asar": "./scripts/releases prepare",
     "preserver": "npm run build:server && npm run build:browser",
-    "server": "CODEX_CLI_PATH=$(which codex) node src/server/main.js"
+    "server": "CODEX_CLI_PATH=$(which codex) node src/server/main.js",
+    "release:status": "./scripts/releases status"
   },
   "repository": "git@github.com:0xcaff/codex-web.git",
   "author": "martin <martincharles07@gmail.com>",

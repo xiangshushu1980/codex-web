@@ -5,8 +5,8 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 // Exercise the prepared upstream function so symbol/patch drift fails visibly.
-const bundle = fs.readFileSync(path.join(__dirname,
-  '../scratch/asar/webview/assets/app-initial-6350d04672d0.js'), 'utf8');
+const bundle = fs.readFileSync(path.join(process.env.CODEX_WEB_ASAR_ROOT || path.join(__dirname, '../scratch/asar'),
+  'webview/assets/app-initial-6350d04672d0.js'), 'utf8');
 const start = bundle.indexOf('async function rZs({');
 const end = bundle.indexOf('\nvar iZs, f8;', start);
 assert.ok(start >= 0 && end > start, 'bootstrap function must exist in prepared bundle');

@@ -105,6 +105,7 @@ flake-utils.lib.eachSystem systems (
           nativeBuildInputs = [
             pkgs.unzip
             pkgs.patch
+            pkgs.python3
           ];
 
           preBuild = ''
@@ -121,6 +122,11 @@ flake-utils.lib.eachSystem systems (
               delete packageJson.scripts.prepare;
               fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
             '
+
+            # Materialize the validated candidate only inside the Nix sandbox.
+            release=$(find scratch/releases -mindepth 1 -maxdepth 1 -type d | head -n 1)
+            cp -a "$release/asar" scratch/asar
+            cp -a "$release/server/." src/server/
 
             # Keep only extracted asar artifacts for packaging.
             rm -rf scratch/ChatGPT.app

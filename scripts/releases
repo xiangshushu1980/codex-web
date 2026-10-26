@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Isolated resource builds and explicit, atomic release selection. No service restart."""
+import argparse
+import datetime
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import uuid
+
+ROOT = Path(__file__).resolve().parent.parent
+STORE = Path(os.environ.get('CODEX_WEB_RELEASE_STORE', ROOT / 'scratch/releases')).resolve()
+
+def digest(p):
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+def source_hashes():
+    result = {}
+    for folder in ['src', 'patches', 'scripts', 'assets', 'tests']:
+        for p in sorted((ROOT / folder).rglob('*')):
+            if not p.is_file() or '__pycache__' in p.parts: continue
+            if folder == 'src' and not p.name.endswith(('.ts', '.tsx')): continue
+            result[str(p.relative_to(ROOT))] = digest(p)
+    for name in ['package.json', 'package-lock.json', 'vite.browser.config.ts']:
+        result[name] = digest(ROOT / name)
+    return result
+
+def git_output(*args):
+    try:
+        result = subprocess.run(['git', *args], cwd=ROOT, capture_output=True)
+        return result.stdout if result.returncode == 0 else None
+    except FileNotFoundError:
+        return None
+
+def atomic_json(p, value):
+    temp = p.with_suffix('.tmp')
+    temp.write_text(json.dumps(value, indent=2) + '\n')
+    temp.replace(p)
+
+def link(name, target):
+    temp = STORE / ('.link-' + uuid.uuid4().hex)
+    temp.symlink_to(target)
+    temp.replace(STORE / name)
+
+def validated(name):
+    release = (STORE / name).resolve()
+    if release.parent != STORE or not release.is_dir():
+        raise ValueError('Release must be a direct child of the release store')
+    meta = json.loads((release / 'release.json').read_text())
+    if meta['status'] != 'validated':
+        raise ValueError('Release has not passed validation')
+    for filename, expected in meta['artifacts'].items():
+        if digest(release / filename) != expected:
+            raise ValueError(f'Release artifact changed: {filename}')
+    return release
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=['prepare', 'status', 'activate', 'rollback', 'serve'])
+    parser.add_argument('release', nargs='?')
+    parser.add_argument('--service-stopped', action='store_true', help='Confirm all consumers are stopped for activation')
+    args, rest = parser.parse_known_args()
+    STORE.mkdir(parents=True, exist_ok=True)
+    if args.action == 'serve':
+        release = validated(args.release or 'current')
+        env = dict(os.environ, CODEX_WEB_ASAR_ROOT=str(release / 'asar'))
+        os.execvpe('node', ['node', str(release / 'server/main.js'), *rest], env)
+    if rest:
+        parser.error('Unexpected arguments: ' + ' '.join(rest))
+    with (STORE / '.lock').open('w') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError('Another release operation is running; retry after it finishes')
+        if args.action == 'status':
+            for p in sorted(STORE.glob('*/release.json')):
+                if p.parent.is_symlink(): continue
+                meta = json.loads(p.read_text())
+                print(p.parent.name, meta['status'], meta.get('upstreamVersion', ''), f"{len(meta.get('artifacts', {}))} artifacts", meta.get('error', ''))
+            for name in ['current', 'previous']:
+                p = STORE / name
+                print(name, os.readlink(p) if p.is_symlink() else '(unset)')
+        elif args.action == 'prepare':
+            name = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ-') + uuid.uuid4().hex[:8]
+            stage = STORE / name
+            stage.mkdir()
+            inputs = source_hashes()
+            env = dict(os.environ, CODEX_WEB_STAGE=str(stage), CODEX_WEB_ASAR_ROOT=str(stage / 'asar'))
+            meta = {'status': 'preparing', 'id': name, 'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat()}
+            atomic_json(stage / 'release.json', meta)
+            try:
+                with (stage / 'build.log').open('w') as log:
+                    for command in [ ['bash', 'scripts/prepare_asar'],
+                                     ['npm', 'run', 'build:browser'],
+                                     ['node_modules/.bin/tsc', '-p', 'src/server', '--outDir', str(stage / 'server')],
+                                     ['node', '--test', 'tests/startup-budget.test.cjs', 'tests/startup-cache.test.cjs']]:
+                        print('Running:', ' '.join(command), flush=True)
+                        subprocess.run(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+                if source_hashes() != inputs:
+                    raise ValueError('Build inputs changed during preparation; rebuild from a stable workspace')
+                pkg = json.loads((stage / 'asar/package.json').read_text())
+                for file in ['asar/' + pkg['main'], 'asar/webview/index.html', 'asar/webview/assets/preload.js', 'server/main.js']:
+                    if not (stage / file).is_file(): raise ValueError('Missing artifact: ' + file)
+                artifacts = {}
+                # Hash all release files used at runtime, including lazy assets and backend modules.
+                for folder in ['asar', 'server']:
+                    for p in sorted((stage / folder).rglob('*')):
+                        if p.is_file(): artifacts[str(p.relative_to(stage))] = digest(p)
+                meta.update(status='validated', upstreamVersion=pkg['version'],
+                            sourceHashes=inputs,
+                            sourceCommit=(git_output('rev-parse', 'HEAD') or b'unavailable').decode().strip(),
+                            sourceDiffHash=hashlib.sha256(git_output('diff', 'HEAD') or b'').hexdigest(),
+                            patchManifest=json.loads((ROOT / 'patches/manifest.json').read_text()),
+                            patchHashes={p.name: digest(p) for p in (ROOT / 'patches').glob('*.patch')},
+                            settingsPreloadBypass=env.get('CODEX_WEB_SETTINGS_PRELOAD_BYPASS') == '1', artifacts=artifacts)
+                atomic_json(stage / 'release.json', meta)
+                print(f'Validated release: {name}\nBuild log: {stage / "build.log"}\nNo running resources changed.')
+            except Exception as error:
+                meta.update(status='failed', error=str(error))
+                atomic_json(stage / 'release.json', meta)
+                raise RuntimeError(f'Preparation failed; live resources unchanged. Inspect {stage / "build.log"}') from error
+        elif args.action in ['activate', 'rollback']:
+            if not args.service_stopped:
+                raise ValueError('Stop consumers at a user-chosen safe time, then pass --service-stopped')
+            state = subprocess.run(['systemctl', '--user', 'is-active', 'codex-web.service'], capture_output=True, text=True)
+            if state.returncode not in [0, 3] or state.stdout.strip() not in ['inactive', 'failed']:
+                raise ValueError('codex-web.service must be confirmed inactive; no resources switched')
+            target = validated('previous' if args.action == 'rollback' else args.release or '')
+            current = STORE / 'current'
+            if current.is_symlink():
+                old = current.resolve()
+                if old == target: return
+                link('previous', old)
+            link('current', target)
+            print(f'Selected {target.name}. Start via scripts/releases serve after configuring the service entrypoint.')
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as error:
+        print(str(error), file=sys.stderr)
+        sys.exit(1)

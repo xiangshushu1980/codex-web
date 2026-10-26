@@ -19,6 +19,8 @@ import fastifyStatic from "@fastify/static";
 import { installModuleAliasHook } from "./module";
 import { registerHostFileRoutes } from "./host-files";
 
+const asarRoot = process.env.CODEX_WEB_ASAR_ROOT ?? path.resolve(__dirname, "../../scratch/asar");
+
 type ServerOptions = {
   host: string;
   port: number;
@@ -403,10 +405,7 @@ function ensureElectronLikeProcessContext(): void {
         }).trim()
       : os.release();
   processWithElectronFields.getSystemVersion ??= () => systemVersion;
-  processWithElectronFields.resourcesPath ??= path.resolve(
-    __dirname,
-    "../../scratch/asar",
-  );
+  processWithElectronFields.resourcesPath ??= asarRoot;
   processWithElectronFields.type ??= "browser";
 }
 
@@ -466,7 +465,7 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
   });
 
   await app.register(fastifyStatic, {
-    root: path.resolve(__dirname, "../../scratch/asar/webview"),
+    root: path.join(asarRoot, "webview"),
     prefix: "/",
   });
 
@@ -697,7 +696,7 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
 
   const packageJson = JSON.parse(
     await fs.readFile(
-      path.resolve(__dirname, "../../scratch/asar/package.json"),
+      path.join(asarRoot, "package.json"),
       "utf8",
     ),
   );
@@ -707,7 +706,7 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
   };
 
   // The upstream entrypoint initializes network policy and starts the app once.
-  require(path.resolve(__dirname, "../../scratch/asar", packageJson.main));
+  require(path.resolve(asarRoot, packageJson.main));
 }
 
 async function main(args: string[]) {

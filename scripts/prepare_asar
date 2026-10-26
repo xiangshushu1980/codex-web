@@ -1,11 +1,33 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
-unzip -o "$HOSTED_CODEX_APP_ZIP" -d scratch/
-asar extract "scratch/ChatGPT.app/Contents/Resources/app.asar" "scratch/asar"
-cp assets/* scratch/asar/webview/
-PWA_SOURCE_ICON="scratch/asar/webview/assets/app-f483cb0295ed.png"
-PWA_TARGET_ICON="scratch/asar/webview/assets/pwa-icon-512.png"
+# Internal worker: never target the live resource directory.
+: "${CODEX_WEB_STAGE:?Use scripts/releases prepare}"
+cd "$(dirname "$0")/.."
+export PATH="$PWD/node_modules/.bin:$PATH"
+stage="$CODEX_WEB_STAGE"
+
+if [[ ! -f "$stage/release.json" || -e "$stage/asar" ]]; then
+  echo "Expected a new release directory with release.json and no existing asar" >&2
+  exit 1
+fi
+mkdir -p "$stage/asar"
+if [[ -n "${HOSTED_CODEX_APP_ASAR:-}" ]]; then
+  asar extract "$HOSTED_CODEX_APP_ASAR" "$stage/asar"
+else
+  : "${HOSTED_CODEX_APP_ZIP:?Provide an app ZIP or HOSTED_CODEX_APP_ASAR}"
+  unzip -q "$HOSTED_CODEX_APP_ZIP" -d "$stage/archive"
+  asar extract "$stage/archive/ChatGPT.app/Contents/Resources/app.asar" "$stage/asar"
+fi
+node scripts/patch-plan.cjs "$stage/asar"
+apply_patch_file() {
+  echo "Checking and applying $1"
+  patch --batch --forward --fuzz=0 --dry-run -p1 -d "$stage/asar" < "$1"
+  patch --batch --forward --fuzz=0 -p1 -d "$stage/asar" < "$1"
+}
+cp assets/* "$stage/asar/webview/"
+PWA_SOURCE_ICON="${stage}/asar/webview/assets/app-f483cb0295ed.png"
+PWA_TARGET_ICON="${stage}/asar/webview/assets/pwa-icon-512.png"
 PWA_ICON_SIZE=512
 PWA_TOTAL_PADDING_PERCENT=25
 PWA_CONTENT_SIZE=$((PWA_ICON_SIZE * (100 - PWA_TOTAL_PADDING_PERCENT) / 100))
@@ -14,59 +36,64 @@ PWA_PADDING_BEFORE=$((PWA_PADDING_TOTAL / 2))
 PWA_PADDING_AFTER=$((PWA_PADDING_TOTAL - PWA_PADDING_BEFORE))
 sharp -i "$PWA_SOURCE_ICON" -o "$PWA_TARGET_ICON" -f png resize "$PWA_CONTENT_SIZE" "$PWA_CONTENT_SIZE" --fit inside -- flatten white -- extend "$PWA_PADDING_BEFORE" "$PWA_PADDING_AFTER" "$PWA_PADDING_BEFORE" "$PWA_PADDING_AFTER" --background white -- removeAlpha
 if [[ -n "${DEV:-}" ]]; then
-  prettier --ignore-path /dev/null --ignore-unknown --write "scratch/asar"
+  prettier --ignore-path /dev/null --ignore-unknown --write "${stage}/asar"
 else
   patched_files=()
   while IFS= read -r patched_file; do
     patched_files+=("$patched_file")
   done < <(
-    awk '/^\+\+\+ b\//{sub(/^\+\+\+ b\//, "scratch/asar/"); print}' patches/*.patch | sort -u
+    awk -v root="$stage/asar/" '/^\+\+\+ b\//{sub(/^\+\+\+ b\//, root); print}' patches/*.patch | sort -u
   )
   prettier --ignore-path /dev/null --ignore-unknown --write "${patched_files[@]}"
 fi
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-remove-csp.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-style.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-preload.patch
+apply_patch_file patches/webview-remove-csp.patch
+apply_patch_file patches/webview-style.patch
+apply_patch_file patches/webview-preload.patch
 # Fetch the authenticated primary route while the renderer shell initializes.
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-preload-primary.patch
+apply_patch_file patches/webview-preload-primary.patch
 # Discover the mandatory initial bundle before the shared runtime evaluates.
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-preload-initial.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-favicon.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-pwa.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-thread-title.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-initial-route.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-electron-shim-close-sidebar.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-prosemirror-inputmode.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-use-atfs-for-local-files.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-override-adapter.patch
+apply_patch_file patches/webview-preload-initial.patch
+apply_patch_file patches/webview-favicon.patch
+apply_patch_file patches/webview-pwa.patch
+apply_patch_file patches/webview-thread-title.patch
+apply_patch_file patches/webview-initial-route.patch
+apply_patch_file patches/webview-electron-shim-close-sidebar.patch
+apply_patch_file patches/webview-prosemirror-inputmode.patch
+apply_patch_file patches/webview-use-atfs-for-local-files.patch
+apply_patch_file patches/webview-statsig-override-adapter.patch
 # Use the existing Statsig fallback after one failed bootstrap request instead
 # of keeping the browser on the startup screen through six timeout attempts.
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-bootstrap-retry.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-prompt-search-param.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/sentry-disable-shell.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/sentry-disable-webview.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/preload-disable-device-check.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-safe-header-left.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-json-rpc.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-browser-windows.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-archive-empty-thread.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-windows-files.patch
-rm -rf scratch/asar/node_modules/better-sqlite3
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-html-sidebar.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-browser-adapter.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-browser-capabilities.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-startup-trace.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-startup-visibility.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-startup-timeout.patch
+apply_patch_file patches/webview-statsig-bootstrap-retry.patch
+apply_patch_file patches/webview-prompt-search-param.patch
+apply_patch_file patches/sentry-disable-shell.patch
+apply_patch_file patches/sentry-disable-webview.patch
+apply_patch_file patches/preload-disable-device-check.patch
+apply_patch_file patches/webview-safe-header-left.patch
+apply_patch_file patches/app-host-json-rpc.patch
+apply_patch_file patches/app-host-browser-windows.patch
+apply_patch_file patches/webview-archive-empty-thread.patch
+apply_patch_file patches/app-host-windows-files.patch
+rm -rf "$stage/asar/node_modules/better-sqlite3"
+apply_patch_file patches/webview-html-sidebar.patch
+apply_patch_file patches/webview-browser-adapter.patch
+apply_patch_file patches/webview-browser-capabilities.patch
+apply_patch_file patches/webview-startup-trace.patch
+apply_patch_file patches/webview-startup-visibility.patch
+apply_patch_file patches/webview-statsig-startup-timeout.patch
 # Give a responding bootstrap a separate bounded budget to finish its large body.
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-statsig-phase-budget.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-startup-cache.patch
+apply_patch_file patches/webview-statsig-phase-budget.patch
+apply_patch_file patches/webview-startup-cache.patch
 # Diagnostic only: normal startup must keep the settings readiness gate.
 if [ "${CODEX_WEB_SETTINGS_PRELOAD_BYPASS:-0}" = "1" ]; then
-  patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-settings-preload-gate.patch
+  apply_patch_file patches/webview-settings-preload-gate.patch
 fi
-patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-startup-http-trace.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/app-host-startup-account-rpc-trace.patch
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-temporary-api-gates.patch
+apply_patch_file patches/app-host-startup-http-trace.patch
+apply_patch_file patches/app-host-startup-account-rpc-trace.patch
+apply_patch_file patches/webview-temporary-api-gates.patch
 # Load dictation sounds on use; startup WAV requests can trigger browser download helpers.
-patch --batch --forward --strip 1 --directory scratch/asar < patches/webview-dictation-lazy-audio.patch
+apply_patch_file patches/webview-dictation-lazy-audio.patch
+# Syntax-check patched JavaScript as well as building the preload bundle.
+while IFS= read -r target; do
+  [[ "$target" == *.js ]] || continue
+  node --check "$stage/asar/$target"
+done < <(awk '/^\+\+\+ b\//{sub(/^\+\+\+ b\//, ""); print}' patches/*.patch | sort -u)

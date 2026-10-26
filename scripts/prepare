@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-set -euxo pipefail
+set -euo pipefail
 
+# Reuse supplied/local archives before downloading.
+if [[ -n "${HOSTED_CODEX_APP_ASAR:-}${HOSTED_CODEX_APP_ZIP:-}" ]]; then
+  exec ./scripts/releases prepare
+fi
+if [[ -f scratch/ChatGPT.app/Contents/Resources/app.asar ]]; then
+  export HOSTED_CODEX_APP_ASAR="$PWD/scratch/ChatGPT.app/Contents/Resources/app.asar"
+  exec ./scripts/releases prepare
+fi
 TEMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 APP_VERSION="26.1007.30912"
-curl -o "$TEMP_DIR/file.zip" "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-$APP_VERSION.zip"
+curl --fail --location -o "$TEMP_DIR/file.zip" "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-darwin-arm64-$APP_VERSION.zip"
 
-HOSTED_CODEX_APP_ZIP="$TEMP_DIR/file.zip" bash ./scripts/prepare_asar
-
-rm -rf "$TEMP_DIR"
+HOSTED_CODEX_APP_ZIP="$TEMP_DIR/file.zip" ./scripts/releases prepare

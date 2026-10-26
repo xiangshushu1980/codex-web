@@ -1,6 +1,6 @@
 --- a/webview/assets/app-shared-8bd9d0399038.js
 +++ b/webview/assets/app-shared-8bd9d0399038.js
-@@ -287195,7 +287195,7 @@
+@@ -287199,7 +287199,7 @@
            { accountId: e, teamId: t, activeFirst: n },
            { get: r, scope: i },
          ) => ({
@@ -9,7 +9,7 @@
            initialPageParam: n ? { cursor: null, filter: `scheduled` } : null,
            getNextPageParam: (e) => e?.nextStatusPage ?? e?.cursor ?? void 0,
            queryFn: async ({ pageParam: r, signal: a }) => {
-@@ -287455,23 +287455,7 @@
+@@ -287459,23 +287459,7 @@
    });
  }
  async function S_i(e, t) {
@@ -34,7 +34,7 @@
  }
  function C_i(e) {
    return e instanceof OW && e.status === 404;
-@@ -287627,7 +287611,7 @@
+@@ -287631,7 +287615,7 @@
            r = n != null && e(B8, n) ? e(V8, n) : void 0,
            i = n != null && r != null && r.error == null ? u_i(r.data) : [];
          return {
@@ -43,7 +43,7 @@
            queryFn: async ({ signal: e }) => {
              let a = i;
              if (n != null && r != null)
-@@ -287653,7 +287637,7 @@
+@@ -287657,7 +287641,7 @@
          let r = t(q8),
            i = t(Y8, r);
          return {
@@ -52,7 +52,7 @@
            initialPageParam: null,
            queryKey: [`cloud-automations`, `scheduled-page`, r, e],
            queryFn: async ({ pageParam: t, signal: i }) => {
-@@ -288758,7 +288742,8 @@
+@@ -288762,7 +288746,8 @@
    hbi,
    gbi,
    _bi,
@@ -62,7 +62,7 @@
  function ybi() {
    return (ybi = t(() => {
      (gA(),
-@@ -288817,6 +288802,11 @@
+@@ -288821,6 +288806,11 @@
          isError: !1,
          isCapable: e6?.demoTools != null,
        }))),
@@ -74,7 +74,14 @@
        (sbi = J(X, ({ get: e }) => {
          let t = e(e(cjn) === `STEPS_PROSE` ? hq : pq),
            n = e(YAn),
-@@ -288985,16 +288975,16 @@
+@@ -288983,22 +288973,22 @@
+       (vbi = {
+         "local-executor": _bi,
+         "cloud-orchestration": gbi,
+-        "realtime-voice": sbi,
++        "realtime-voice": zbi,
+         "browser-codex": J_i,
+         chatgpt: rbi,
          "chat-seat-access": ibi,
          "chatgpt-conversations": abi,
          "clinical-starter-prompts": cvi,
@@ -98,14 +105,6 @@
          "workspace-in-app-browser": fbi,
        }));
    }))();
-@@ -288970,7 +288960,7 @@
-         "local-executor": _bi,
-         "cloud-orchestration": gbi,
--        "realtime-voice": sbi,
-+        "realtime-voice": zbi,
-         "browser-codex": J_i,
-         chatgpt: rbi,
-         "chat-seat-access": ibi,
 --- a/webview/assets/app-initial-6350d04672d0.js
 +++ b/webview/assets/app-initial-6350d04672d0.js
 @@ -76345,11 +76345,7 @@
@@ -357,15 +356,4 @@
 +  let G = null;
    let be;
    t[66] !== i ||
-  t[67] !== d ||
---- a/webview/assets/app-initial-6350d04672d0.js
-+++ b/webview/assets/app-initial-6350d04672d0.js
-@@ -614398,6 +614398,1 @@
--      typeof window < `u` &&
--        window.setTimeout(() => {
--          try {
--            Qpl();
--          } catch {}
--        }, 0));
-+      false;
- }
+   t[67] !== d ||

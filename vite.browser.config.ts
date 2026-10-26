@@ -4,12 +4,12 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 const configDir = path.dirname(fileURLToPath(import.meta.url));
-const asarPackagePath = path.resolve(configDir, "scratch/asar/package.json");
-const webviewRoot = path.resolve(configDir, "scratch/asar/webview");
-const preloadEntryPath = path.resolve(
-  configDir,
-  "scratch/asar/.vite/build/preload.js",
+const asarRoot = path.resolve(
+  process.env.CODEX_WEB_ASAR_ROOT ?? path.join(configDir, "scratch/asar"),
 );
+const asarPackagePath = path.join(asarRoot, "package.json");
+const webviewRoot = path.join(asarRoot, "webview");
+const preloadEntryPath = path.resolve(asarRoot, ".vite/build/preload.js");
 const browserNodeEnv = process.env.NODE_ENV ?? "production";
 const asarPackageJson = JSON.parse(readFileSync(asarPackagePath, "utf8")) as {
   version?: unknown;
@@ -47,7 +47,7 @@ export default defineConfig({
   },
   build: {
     commonjsOptions: {
-      include: [/scratch\/asar\/\.vite\/build\/preload\.js/, /node_modules/],
+      include: [/\.vite\/build\/preload\.js/, /node_modules/],
       requireReturnsDefault: "auto",
       transformMixedEsModules: true,
     },

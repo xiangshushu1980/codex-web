@@ -40,18 +40,18 @@ Windows 浏览器 → WSL Fastify HTTP/WebSocket 服务 → Electron 主进程 s
 
 ## 构建和检查
 
-已有 `scratch/asar` 和依赖时：
+生产候选构建使用独立目录，完整步骤见 [构建与切换手册](../UPGRADING.md)：
 
 ```bash
-npm run build:server
-npm run build:browser
+HOSTED_CODEX_APP_ASAR="$PWD/scratch/ChatGPT.app/Contents/Resources/app.asar" npm run build
+python3 tests/releases.test.py
 npm run test:files
 npm run test:startup
 ```
 
-`build:server` 在源码旁输出 JS、声明和 source map，Git 忽略它们。浏览器构建更新 `scratch/asar/webview/assets/preload.js`。文件测试覆盖路径规范化、Explorer argv、启动失败和上游 openIn 路由；测试使用 mock 启动器，不弹出 Windows 窗口，fixture 在临时目录，结束清理。
+准备失败不覆盖旧资源，成功后也不自动切换。候选同时保存浏览器资源和后端编译文件，`scripts/releases serve` 在启动时固定同一版本。切换与回退需安全停机窗口，不能以刷新浏览器替代后端重启。
 
-首次准备或升级应用时，按 [UPGRADING](../UPGRADING.md) 准备应用包和 `HOSTED_CODEX_APP_ZIP`，再执行 `npm run build`。它会重新解包并应用补丁，不能拿来保留 scratch 中的手工实验。不要为普通 TypeScript 改动重新下载应用包。
+旧布局开发命令 `build:browser` 原地更新 `scratch/asar/webview/assets/preload.js`，`build:server` 在源码旁输出忽略的 JS、声明和 map；两者不属于隔离发布路径。文件测试使用 mock 启动器，不弹出 Windows 窗口，fixture 在临时目录。
 
 开发模式：先启动 WSL 后端，再 `npm run dev:browser`；Vite 默认监听 4173，代理 `/__backend/ipc`、`/__backend/upload` 到 8214。
 
