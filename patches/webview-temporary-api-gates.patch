@@ -98,6 +98,14 @@
          "workspace-in-app-browser": fbi,
        }));
    }))();
+@@ -288970,7 +288960,7 @@
+         "local-executor": _bi,
+         "cloud-orchestration": gbi,
+-        "realtime-voice": sbi,
++        "realtime-voice": zbi,
+         "browser-codex": J_i,
+         chatgpt: rbi,
+         "chat-seat-access": ibi,
 --- a/webview/assets/app-initial-6350d04672d0.js
 +++ b/webview/assets/app-initial-6350d04672d0.js
 @@ -76345,11 +76345,7 @@

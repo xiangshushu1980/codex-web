@@ -33,7 +33,7 @@
 
 补丁：[`webview-temporary-api-gates.patch`](../../patches/webview-temporary-api-gates.patch)，由 [`prepare_asar`](../../scripts/prepare_asar) 在其他上游补丁之后应用。
 
-- **语音/听写**：关闭 composer、ChatGPT、全局和 workspace dictation 能力，因此不显示入口，也不再进入录音后必失败的转写流程。额外移除 `rml()` 启动时的 `Qpl()` 调用；该调用会预取开始、停止和错误提示音，其中 `dictation-start-*.wav` 即使未使用听写也会在启动时请求。
+- **语音/听写**：关闭 composer、ChatGPT、全局和 workspace dictation 能力，并关闭 `realtime-voice` 能力，因此不显示听写或“开始语音对话”入口，也不再进入录音/实时语音启动流程。额外移除 `rml()` 启动时的 `Qpl()` 调用；该调用会预取开始、停止和错误提示音，其中 `dictation-start-*.wav` 即使未使用听写也会在启动时请求。
 - **自动化**：关闭云端、本地和定时任务能力；关闭相关自动化列表查询及每分钟轮询。
 - **宠物**：从设置导航移除宠物页，禁用宠物目录查询。
 - **连接器模板**：停止 GitHub/GitLab 模板目录查询，并从设置导航移除 Plugins 页面；既有连接器详情查询仍保留。
