@@ -19,6 +19,10 @@ npm run release:status
 
 日常 TypeScript 变更同样可用本地原始 ASAR 重新准备候选，无需下载。`npm run build:browser` 和 `npm run build:server` 保留为**旧布局开发命令**：分别原地更新 scratch 浏览器产物和源码旁后端产物，不提供隔离发布保证，不应用于生产升级。`npm run server` 仍启动旧布局；候选服务使用下面的固定版本入口。
 
+**不要对已验证的 release 执行原地构建或修改产物。** `build:browser` 的输出由 `CODEX_WEB_ASAR_ROOT` 决定；即使没有显式设置，`scratch/asar` 也可能经软链接指向 release。执行旧布局命令前必须核对环境变量及目标实际路径（例如 `printf '%s\n' "${CODEX_WEB_ASAR_ROOT:-$PWD/scratch/asar}"` 和 `realpath`），确保不落在 `scratch/releases/` 内。包括 `current`、`previous` 和已验证但尚未启用的候选均不可写。日常验证生产构建用上面的 `npm run build`，它为每次构建创建新候选；开发预览可用 `npm run dev:browser`。
+
+启动时 `serve` 会重新校验全部产物哈希。若看到 `Release artifact changed: ...`，不要手工改清单或继续重试：核对 `npm run release:status`、服务日志及指针，在安全窗口停止服务，从原始包重建候选，再按下文启用已验证候选或回退到已验证版本。服务自动重启可能反复触发同一失败；只有在确认没有活动会话需要保护后才停止重试。`status` 显示 `validated` 本身不是当前哈希复核，`activate` 和 `serve` 才会校验。中断留下的 `preparing` 目录不是可启用版本，不要手工标记为 validated。
+
 首次安装的 `scripts/prepare` 仍可下载指定版本，但只产出候选，不自动启用。网络异常时不要连续重试大包。Nix 打包在隔离 sandbox 内把已验证候选复制到传统包布局；本轮未执行 Nix 构建。
 
 ## 补丁维护
@@ -46,7 +50,7 @@ systemctl --user stop codex-web.service
 [Service]
 ExecStart=
 ExecStart=/home/sean/projects/codex-web/scripts/releases serve --host 127.0.0.1 --port 8214
-Environment=NODE_OPTIONS=--max-old-space-size=512
+Environment=NODE_OPTIONS=
 Environment=PATH=/home/sean/.local/share/fnm/node-versions/v24.18.0/installation/bin:/usr/local/bin:/usr/bin:/bin
 ```
 
