@@ -9,6 +9,7 @@
 | 当前本地架构、源码入口、开发与验证 | [开发手册](development.md) |
 | 首屏启动慢的测量、诊断证据与优化方向 | [启动性能排查](startup-performance.md) |
 | 首屏功能配置缓存、有效期、身份隔离与更新标记 | [配置缓存](startup-cache.md) |
+| WSL 终端快捷键与 Windows Terminal 跳转 | [Windows Terminal](windows-terminal.md) |
 | Explorer 文件定位、路径规则和故障处理 | [WSL 文件访问](file-access.md) |
 | 为何恢复内置预览并使用 Windows Explorer | [文件访问决策](decisions/browser-file-access.md) |
 | 临时停用被上游挑战拦截的功能及恢复步骤 | [接口降级决策](decisions/upstream-api-degraded-surfaces.md) |

@@ -252,6 +252,20 @@
         "webview-temporary-api-gates.patch"
       ],
       "optional": false
+    },
+    {
+      "file": "webview-windows-terminal.patch",
+      "after": [
+        "webview-dictation-lazy-audio.patch"
+      ],
+      "optional": false
+    },
+    {
+      "file": "webview-windows-terminal-action.patch",
+      "after": [
+        "webview-windows-terminal.patch"
+      ],
+      "optional": false
     }
   ]
 }

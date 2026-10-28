@@ -1,0 +1,68 @@
+--- a/webview/assets/app-initial-6350d04672d0.js
++++ b/webview/assets/app-initial-6350d04672d0.js
+@@ -82646,6 +82646,13 @@
+       (lJt = () => {
+         Ho.dispatchHostMessage({ type: `navigate-forward` });
+       }),
++      (window.addEventListener(`keydown`, (event) => {
++        if (event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && (event.code === `Backquote` || event.key === "`")) {
++          event.preventDefault();
++          event.stopImmediatePropagation();
++          if (!event.repeat) nJt();
++        }
++      }, true)),
+       (uJt = new Map([
+         [`newTask`, zqt],
+         [`newProjectlessTask`, Bqt],
+@@ -316139,7 +316146,7 @@
+   XNa(e, `right`);
+ }
+ function XNa(e, t, n) {
+-  WNa(e, void 0, t, { forceNew: !0, replaceTabId: n });
++  void codexWebOpenWindowsTerminal(e);
+ }
+ function ZNa(e, { panel: t, sessionId: n, snapshot: r }) {
+   let i = lPa(e);
+@@ -316162,19 +316169,31 @@
+     HNa(e);
+   }
+ }
+-function $Na(e, t = ePa(e)) {
+-  if (!e.get(Qp)) {
+-    if (t === `bottom`) {
+-      QNa(e);
+-      return;
+-    }
+-    if (e.get(_Pa)) {
+-      VNa(e);
+-      return;
+-    }
+-    WNa(e, void 0, `right`);
++async function codexWebOpenWindowsTerminal(e) {
++  try {
++    if (e.value.routeKind === `local-thread`) {
++      const hostId = e.get(PA)?.hostId ?? e.get(IA);
++      const key = { conversationId: e.value.conversationId, hostId };
++      if (e.get(fg, hostId) && e.query.getData(Nr, key) === void 0)
++        await e.query.fetch(Nr, key);
++    }
++    const target = lPa(e);
++    if (!target || target.hostId !== `local` || !target.cwd)
++      throw new Error(`无法确定当前本地对话的工作目录。`);
++    const response = await fetch(`/__backend/windows-terminal`, {
++      method: `POST`, headers: { "Content-Type": `application/json` },
++      body: JSON.stringify({ cwd: target.cwd }),
++    });
++    const result = await response.json();
++    if (!response.ok) throw new Error(result.error || `启动失败`);
++  } catch (error) {
++    window.alert(error instanceof Error ? error.message : String(error));
+   }
+ }
++function $Na(e, t = ePa(e)) {
++  if (!e.get(Qp)) void codexWebOpenWindowsTerminal(e);
++}
++
+ function ePa(e) {
+   return e.get(vPa);
+ }

@@ -92,6 +92,8 @@ apply_patch_file patches/app-host-startup-account-rpc-trace.patch
 apply_patch_file patches/webview-temporary-api-gates.patch
 # Load dictation sounds on use; startup WAV requests can trigger browser download helpers.
 apply_patch_file patches/webview-dictation-lazy-audio.patch
+apply_patch_file patches/webview-windows-terminal.patch
+apply_patch_file patches/webview-windows-terminal-action.patch
 # Syntax-check patched JavaScript as well as building the preload bundle.
 while IFS= read -r target; do
   [[ "$target" == *.js ]] || continue

@@ -18,6 +18,7 @@ import fastifyMultipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { installModuleAliasHook } from "./module";
 import { registerHostFileRoutes } from "./host-files";
+import { registerWindowsTerminalRoute } from "./windows-terminal";
 
 const asarRoot = process.env.CODEX_WEB_ASAR_ROOT ?? path.resolve(__dirname, "../../scratch/asar");
 
@@ -470,6 +471,7 @@ async function startIpcBridgeServer(options: ServerOptions): Promise<void> {
   });
 
   registerHostFileRoutes(app);
+  registerWindowsTerminalRoute(app);
 
   app.get("/", async (_request, reply) => {
     return reply.sendFile("index.html");
